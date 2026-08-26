@@ -20,115 +20,250 @@ The project is built using **FastAPI**, **PostgreSQL**, **SQLAlchemy**, and **Al
 - Git & GitHub
 
 ---
-## ⚙️ Installation
-1. Clone the repository
+# ⚙️ Installation
+
+## 1. Clone the repository
+
+```bash
 git clone <your-github-repository-url>
-
-Move into the project:
-
 cd backend
-2. Create a virtual environment
+```
+
+## 2. Create a virtual environment
+
+```bash
 python -m venv .venv
-3. Activate the virtual environment
-Windows PowerShell
+```
+
+## 3. Activate the virtual environment
+
+### Windows PowerShell
+
+```bash
 .venv\Scripts\activate
+```
 
-If PowerShell blocks activation:
+## 4. Install dependencies
 
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-Then:
-
-.venv\Scripts\activate
-4. Install dependencies
+```bash
 pip install -r requirements.txt
-🔐 Environment Variables
+```
 
-Create a .env file in the project root.
+## 5. Configure environment variables
 
-Example:
+Create a `.env` file in the project root:
 
-DATABASE_URL=postgresql+psycopg://postgres:<YOUR_PASSWORD>@localhost:54323/inventory_db
+```env
+DATABASE_URL=postgresql+psycopg://postgres:YOUR_PASSWORD@localhost:54323/inventory_db
+```
 
-Replace:
+Replace `YOUR_PASSWORD` with your PostgreSQL password.
 
-<YOUR_PASSWORD>
+> Do not upload `.env` to GitHub.
 
-with your PostgreSQL password.
+## 6. Run database migrations
 
-Important
-
-Do not commit .env to GitHub.
-
-Add this to .gitignore:
-
-.env
-.venv/
-__pycache__/
-*.pyc
-🐘 PostgreSQL Setup
-
-Create a PostgreSQL database named:
-
-inventory_db
-
-Make sure PostgreSQL is running.
-
-The database connection contains:
-
-Host     : localhost
-Port     : 54323
-Database : inventory_db
-Username : postgres
-
-If your PostgreSQL installation uses a different port, update the DATABASE_URL accordingly.
-
-## 🔄 Database Migrations
-
-Alembic is used to create and update database tables.
-
-Create migration
-
-After creating or changing SQLAlchemy models:
-
-alembic revision --autogenerate -m "create inventory tables"
-
-Example output:
-
-Detected added table 'categories'
-Detected added table 'suppliers'
-Detected added table 'products'
-Apply migration
+```bash
 alembic upgrade head
+```
 
-This creates the tables in PostgreSQL.
+## 7. Start the FastAPI server
 
-Check migration status
-alembic current
-View migration history
-alembic history
-## ▶️ Run the Backend
-
-Start FastAPI using Uvicorn:
-
+```bash
 uvicorn app.main:app --reload
+```
 
-The backend will normally run at:
+---
 
-http://127.0.0.1:8000
 
-For access from another device on the same network:
 
+# 📖 API Documentation
+
+Once the server is running, open:
+
+### Swagger UI
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+### ReDoc
+
+```text
+http://127.0.0.1:8000/redoc
+```
+
+---
+
+## 🌐 Frontend Integration
+
+The Angular frontend communicates with the FastAPI backend through HTTP APIs.
+
+### 1. Clone the Frontend Repository
+
+Clone the frontend project:
+
+```bash
+git clone <frontend-github-repository-url>
+cd <frontend-project-folder>
+```
+
+Install the frontend dependencies:
+
+```bash
+npm install
+```
+
+Start the Angular application:
+
+```bash
+ng serve
+```
+
+The frontend will normally run at:
+
+```text
+http://localhost:4200
+```
+
+---
+
+### 2. Backend URL
+
+Start the FastAPI backend:
+
+```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
-Then the backend can be accessed using the computer's local IP:
+For a frontend running on the same computer, use:
 
-http://YOUR_LOCAL_IP:8000
+```text
+http://127.0.0.1:8000
+```
+
+For a frontend running on another computer on the same network, use the backend computer's IPv4 address:
+
+```text
+http://192.168.1.32:8000
+```
+
+Replace `192.168.1.32` with the backend computer's current IPv4 address.
+
+---
+
+### 3. API Base URL
+
+The Angular frontend should use the backend URL as its API base URL.
 
 Example:
 
-http://192.168.1.32:8000
+```typescript
+private apiUrl = 'http://192.168.1.32:8000';
+```
 
+---
+
+### 4. API Endpoints
+
+#### Categories
+
+```text
+GET    /categories
+POST   /categories
+GET    /categories/{category_id}
+PUT    /categories/{category_id}
+DELETE /categories/{category_id}
+```
+
+#### Suppliers
+
+```text
+GET    /suppliers
+POST   /suppliers
+GET    /suppliers/{supplier_id}
+PUT    /suppliers/{supplier_id}
+DELETE /suppliers/{supplier_id}
+```
+
+#### Products
+
+```text
+GET    /products
+POST   /products
+GET    /products/{product_id}
+PUT    /products/{product_id}
+DELETE /products/{product_id}
+GET    /products/summary
+```
+
+Example:
+
+```text
+GET http://192.168.1.32:8000/products
+```
+
+---
+
+### 5. Frontend → Backend Flow
+
+```text
+Angular Frontend
+       ↓
+   HttpClient
+       ↓
+   FastAPI API
+       ↓
+  Service Layer
+       ↓
+   SQLAlchemy
+       ↓
+  PostgreSQL
+       ↓
+   FastAPI Response
+       ↓
+ Angular Frontend
+```
+
+---
+
+### 6. Testing the Backend
+
+Swagger documentation:
+
+```text
+http://192.168.1.32:8000/docs
+```
+
+Example API:
+
+```text
+http://192.168.1.32:8000/products/summary
+```
+
+---
+
+### ⚠️ LAN Testing
+
+If the frontend is running on another laptop:
+
+- Both computers must be connected to the same Wi-Fi/LAN.
+- The backend must be running with:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+- Port `8000` must be allowed through Windows Firewall.
+- The frontend must use the backend computer's LAN IP.
+
+Example:
+
+```text
+http://192.168.1.32:8000
+```
+
+> The backend computer's IP address may change when reconnecting to Wi-Fi. Check it using `ipconfig`.
 
 ## 📁 Project Structure
 
