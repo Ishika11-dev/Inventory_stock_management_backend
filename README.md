@@ -142,13 +142,6 @@ For a frontend running on the same computer, use:
 http://127.0.0.1:8000
 ```
 
-For a frontend running on another computer on the same network, use the backend computer's IPv4 address:
-
-```text
-http://192.168.1.32:8000
-```
-
-Replace `192.168.1.32` with the backend computer's current IPv4 address.
 
 ---
 
@@ -159,7 +152,7 @@ The Angular frontend should use the backend URL as its API base URL.
 Example:
 
 ```typescript
-private apiUrl = 'http://192.168.1.32:8000';
+private apiUrl = 'http://xyz:8000';
 ```
 
 ---
@@ -197,11 +190,6 @@ DELETE /products/{product_id}
 GET    /products/summary
 ```
 
-Example:
-
-```text
-GET http://192.168.1.32:8000/products
-```
 
 ---
 
@@ -227,43 +215,6 @@ Angular Frontend
 
 ---
 
-### 6. Testing the Backend
-
-Swagger documentation:
-
-```text
-http://192.168.1.32:8000/docs
-```
-
-Example API:
-
-```text
-http://192.168.1.32:8000/products/summary
-```
-
----
-
-### ⚠️ LAN Testing
-
-If the frontend is running on another laptop:
-
-- Both computers must be connected to the same Wi-Fi/LAN.
-- The backend must be running with:
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-- Port `8000` must be allowed through Windows Firewall.
-- The frontend must use the backend computer's LAN IP.
-
-Example:
-
-```text
-http://192.168.1.32:8000
-```
-
-> The backend computer's IP address may change when reconnecting to Wi-Fi. Check it using `ipconfig`.
 
 ## 📁 Project Structure
 
