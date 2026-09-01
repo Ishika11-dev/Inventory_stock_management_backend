@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
 
 from app.models.user import User
+from app.schemas.auth import UserRole
+
 from app.core.security import (
     hash_password,
     verify_password,
@@ -13,8 +15,31 @@ def register_user(
     username: str,
     email: str,
     password: str,
-    role: str = "STAFF"
+    role: UserRole
 ):
+    email = email.lower()
+
+    # --------------------------------
+    # CHECK EMAIL + ROLE
+    # --------------------------------
+
+    if role == UserRole.ADMIN:
+
+        if not email.endswith("@admin.com"):
+            raise ValueError(
+                "ADMIN users must use an @admin.com email"
+            )
+
+    elif role == UserRole.STAFF:
+
+        if not email.endswith("@staff.com"):
+            raise ValueError(
+                "STAFF users must use an @staff.com email"
+            )
+
+    # --------------------------------
+    # CHECK USERNAME
+    # --------------------------------
 
     existing_user = (
         db.query(User)
@@ -23,7 +48,13 @@ def register_user(
     )
 
     if existing_user:
-        return None
+        raise ValueError(
+            "Username already exists"
+        )
+
+    # --------------------------------
+    # CHECK EMAIL
+    # --------------------------------
 
     existing_email = (
         db.query(User)
@@ -32,15 +63,25 @@ def register_user(
     )
 
     if existing_email:
-        return None
+        raise ValueError(
+            "Email already exists"
+        )
+
+    # --------------------------------
+    # HASH PASSWORD
+    # --------------------------------
 
     hashed_password = hash_password(password)
+
+    # --------------------------------
+    # CREATE USER
+    # --------------------------------
 
     user = User(
         username=username,
         email=email,
         password_hash=hashed_password,
-        role=role
+        role=role.value
     )
 
     db.add(user)
@@ -56,6 +97,10 @@ def authenticate_user(
     password: str
 ):
 
+    # --------------------------------
+    # FIND USER
+    # --------------------------------
+
     user = (
         db.query(User)
         .filter(User.username == username)
@@ -64,6 +109,10 @@ def authenticate_user(
 
     if not user:
         return None
+
+    # --------------------------------
+    # VERIFY PASSWORD
+    # --------------------------------
 
     if not verify_password(
         password,
@@ -88,6 +137,10 @@ def login_user(
 
     if not user:
         return None
+
+    # --------------------------------
+    # CREATE JWT
+    # --------------------------------
 
     token = create_access_token(
         {

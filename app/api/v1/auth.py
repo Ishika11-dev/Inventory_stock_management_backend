@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+
 from app.schemas.auth import (
     RegisterRequest,
     LoginRequest,
     TokenResponse,
     UserResponse
 )
+
 from app.services.auth_service import (
     register_user,
     login_user
@@ -30,22 +32,24 @@ def register(
     db: Session = Depends(get_db)
 ):
 
-    user = register_user(
-        db=db,
-        username=data.username,
-        email=data.email,
-        password=data.password,
-        role=data.role
-    )
+    try:
 
-    if not user:
-        raise HTTPException(
-            status_code=400,
-            detail="Username or email already exists"
+        user = register_user(
+            db=db,
+            username=data.username,
+            email=data.email,
+            password=data.password,
+            role=data.role
         )
 
-    return user
+        return user
 
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 @router.post(
     "/login",
@@ -63,6 +67,7 @@ def login(
     )
 
     if not token:
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password"
