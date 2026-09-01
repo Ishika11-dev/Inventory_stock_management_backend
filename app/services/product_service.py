@@ -33,38 +33,30 @@ def calculate_stock_status(
 
 def create_product(
     db: Session,
-    data: ProductCreate
-):
+    data: ProductCreate):
     category = db.get(
         Category,
-        data.category_id
-    )
+        data.category_id)
 
     if not category:
         raise NotFoundException(
-            "Category not found"
-        )
+            "Category not found")
 
     supplier = db.get(
         Supplier,
-        data.supplier_id
-    )
+        data.supplier_id)
 
     if not supplier:
         raise NotFoundException(
-            "Supplier not found"
-        )
+            "Supplier not found")
 
     existing_sku = db.scalar(
         select(Product).where(
-            Product.sku == data.sku
-        )
-    )
+            Product.sku == data.sku))
 
     if existing_sku:
         raise ConflictException(
-            "Product with this SKU already exists"
-        )
+            "Product with this SKU already exists")
 
     product = Product(
         name=data.name,
@@ -74,8 +66,7 @@ def create_product(
         unit_price=data.unit_price,
         quantity_in_stock=data.quantity_in_stock,
         reorder_level=data.reorder_level,
-        is_active=True
-    )
+        is_active=True)
 
     db.add(product)
     db.commit()
@@ -90,11 +81,9 @@ def get_products(
     page_size: int,
     search: str | None = None,
     category_id: int | None = None,
-    stock_status: str | None = None
-):
+    stock_status: str | None = None):
     query = select(Product).where(
-        Product.is_active.is_(True)
-    )
+        Product.is_active.is_(True) )
 
     if search:
         search_value = f"%{search}%"
@@ -102,32 +91,26 @@ def get_products(
         query = query.where(
             or_(
                 Product.name.ilike(search_value),
-                Product.sku.ilike(search_value)
-            )
-        )
+                Product.sku.ilike(search_value) ))
 
     if category_id is not None:
         query = query.where(
-            Product.category_id == category_id
-        )
+            Product.category_id == category_id)
 
     if stock_status == "out of stock":
         query = query.where(
-            Product.quantity_in_stock == 0
-        )
+            Product.quantity_in_stock == 0)
 
     elif stock_status == "low stock":
         query = query.where(
             Product.quantity_in_stock > 0,
             Product.quantity_in_stock
-            <= Product.reorder_level
-        )
+            <= Product.reorder_level)
 
     elif stock_status == "in stock":
         query = query.where(
             Product.quantity_in_stock
-            > Product.reorder_level
-        )
+            > Product.reorder_level)
 
     count_query = select(
         func.count()
