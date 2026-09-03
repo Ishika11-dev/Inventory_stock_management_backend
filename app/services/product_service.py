@@ -219,34 +219,36 @@ def update_product(
 
     return product
 
-
 def adjust_stock(
     db: Session,
     product_id: int,
-    data: StockAdjustment
+    data: StockUpdate
 ):
-    product = get_product(
-        db,
-        product_id
-    )
+    product = db.get(Product, product_id)
 
-    new_quantity = (
-        product.quantity_in_stock
-        + data.change
-    )
-
-    if new_quantity < 0:
-        raise ConflictException(
-            "Stock quantity cannot go below zero"
+    if not product:
+        raise NotFoundException(
+            "Product not found"
         )
 
-    product.quantity_in_stock = new_quantity
+    if data.operation == "IN":
+        product.quantity_in_stock += data.quantity
+
+    elif data.operation == "OUT":
+
+        if data.quantity > product.quantity_in_stock:
+            raise ConflictException(
+                "Insufficient stock"
+            )
+
+        product.quantity_in_stock -= data.quantity
 
     db.commit()
     db.refresh(product)
 
     return product
 
+   
 
 def delete_product(
     db: Session,

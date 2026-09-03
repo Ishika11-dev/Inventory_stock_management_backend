@@ -68,8 +68,9 @@ class ProductUpdate(BaseModel):
 
 
 class StockAdjustment(BaseModel):
-    change: int
-    reason: str
+    quantity: int = Field(..., gt=0)
+    operation: Literal["IN", "OUT"]
+    reason: str = Field(..., min_length=1, max_length=255)
 
 class ProductResponse(BaseModel):
     id: int
