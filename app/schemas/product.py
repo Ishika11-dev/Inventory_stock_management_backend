@@ -69,11 +69,7 @@ class ProductUpdate(BaseModel):
 
 class StockAdjustment(BaseModel):
     change: int
-    reason: str = Field(
-        ...,
-        min_length=1,
-        max_length=255)
-
+    reason: str
 
 class ProductResponse(BaseModel):
     id: int

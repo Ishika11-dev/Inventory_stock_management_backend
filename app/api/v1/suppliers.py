@@ -1,13 +1,11 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-
 from app.core.dependencies import (
     require_admin,
-    require_admin_or_staff
+    require_admin_or_staff,
 )
-
 from app.models.user import User
 
 from app.schemas.supplier import (
@@ -16,12 +14,7 @@ from app.schemas.supplier import (
     SupplierUpdate,
 )
 
-from app.services import supplier_service
-
-from app.utils.exceptions import (
-    ConflictException,
-    NotFoundException,
-)
+from app.controllers import supplier_controller
 
 
 router = APIRouter(
@@ -29,11 +22,6 @@ router = APIRouter(
     tags=["Suppliers"]
 )
 
-
-# ==========================================
-# CREATE SUPPLIER
-# ADMIN ONLY
-# ==========================================
 
 @router.post(
     "/",
@@ -45,25 +33,11 @@ def create_supplier(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
-    try:
+    return supplier_controller.create_supplier(
+        db=db,
+        data=data
+    )
 
-        return supplier_service.create_supplier(
-            db,
-            data
-        )
-
-    except ConflictException as e:
-
-        raise HTTPException(
-            status_code=409,
-            detail=e.message
-        )
-
-
-# ==========================================
-# GET SUPPLIERS
-# ADMIN + STAFF
-# ==========================================
 
 @router.get(
     "/",
@@ -73,14 +47,25 @@ def get_suppliers(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin_or_staff)
 ):
+    return supplier_controller.get_suppliers(
+        db=db
+    )
 
-    return supplier_service.get_suppliers(db)
 
+@router.get(
+    "/{supplier_id}",
+    response_model=SupplierResponse
+)
+def get_supplier(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_staff)
+):
+    return supplier_controller.get_supplier(
+        db=db,
+        supplier_id=supplier_id
+    )
 
-# ==========================================
-# UPDATE SUPPLIER
-# ADMIN ONLY
-# ==========================================
 
 @router.put(
     "/{supplier_id}",
@@ -92,26 +77,12 @@ def update_supplier(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
-    try:
+    return supplier_controller.update_supplier(
+        db=db,
+        supplier_id=supplier_id,
+        data=data
+    )
 
-        return supplier_service.update_supplier(
-            db,
-            supplier_id,
-            data
-        )
-
-    except NotFoundException as e:
-
-        raise HTTPException(
-            status_code=404,
-            detail=e.message
-        )
-
-
-# ==========================================
-# DELETE SUPPLIER
-# ADMIN ONLY
-# ==========================================
 
 @router.delete(
     "/{supplier_id}",
@@ -122,23 +93,7 @@ def delete_supplier(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
-    try:
-
-        supplier_service.delete_supplier(
-            db,
-            supplier_id
-        )
-
-    except NotFoundException as e:
-
-        raise HTTPException(
-            status_code=404,
-            detail=e.message
-        )
-
-    except ConflictException as e:
-
-        raise HTTPException(
-            status_code=409,
-            detail=e.message
-        )
+    supplier_controller.delete_supplier(
+        db=db,
+        supplier_id=supplier_id
+    )
