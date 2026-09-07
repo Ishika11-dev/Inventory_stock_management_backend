@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.schemas.auth import UserRole
 from app.services.auth_service import (
     register_user,
     login_user,
@@ -12,7 +13,7 @@ def register(
     username: str,
     email: str,
     password: str,
-    role
+    role : UserRole
 ):
     user = register_user(
         db=db,

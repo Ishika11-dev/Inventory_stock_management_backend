@@ -9,7 +9,7 @@ from app.utils.exceptions import (
     ConflictException,
     NotFoundException,)
 
-
+import uuid
 def create_category(
     db: Session,
     data: CategoryCreate):
@@ -40,7 +40,7 @@ def get_categories(db: Session):
 
 def update_category(
     db: Session,
-    category_id: int,
+    category_id: uuid.UUID,
     data: CategoryUpdate):
     category = db.get(
         Category,
@@ -73,7 +73,7 @@ def update_category(
 
 def delete_category(
     db: Session,
-    category_id: int):
+    category_id: uuid.UUID):
     category = db.get(
         Category,
         category_id)

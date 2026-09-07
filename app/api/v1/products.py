@@ -25,7 +25,7 @@ from app.utils.constraints import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
 )
-
+import uuid
 
 router = APIRouter(
     prefix="/products",
@@ -75,9 +75,8 @@ def get_products(
         le=MAX_PAGE_SIZE
     ),
     search: str | None = None,
-    category_id: int | None = Query(
-        default=None,
-        gt=0
+    category_id: uuid.UUID | None = Query(
+        default=None
     ),
     stock_status: str | None = None,
     db: Session = Depends(get_db),
@@ -98,7 +97,7 @@ def get_products(
     response_model=ProductResponse
 )
 def get_product(
-    product_id: int,
+    product_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends
     (require_admin_or_staff)
@@ -114,7 +113,7 @@ def get_product(
     response_model=ProductResponse
 )
 def update_product(
-    product_id: int,
+    product_id: uuid.UUID,
     data: ProductUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
@@ -131,7 +130,7 @@ def update_product(
     response_model=ProductResponse
 )
 def adjust_stock(
-    product_id: int,
+    product_id: uuid.UUID,
     data: StockAdjustment,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
@@ -149,7 +148,7 @@ def adjust_stock(
     status_code=status.HTTP_204_NO_CONTENT
 )
 def delete_product(
-    product_id: int,
+    product_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):

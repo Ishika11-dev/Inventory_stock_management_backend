@@ -15,7 +15,7 @@ from app.schemas.category import (
 )
 
 from app.controllers import category_controller
-
+import uuid
 
 router = APIRouter(
     prefix="/categories",
@@ -57,7 +57,7 @@ def get_categories(
     response_model=CategoryResponse
 )
 def get_category(
-    category_id: int,
+    category_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin_or_staff)
 ):
@@ -72,7 +72,7 @@ def get_category(
     response_model=CategoryResponse
 )
 def update_category(
-    category_id: int,
+    category_id: uuid.UUID,
     data: CategoryUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
@@ -89,7 +89,7 @@ def update_category(
     status_code=status.HTTP_204_NO_CONTENT
 )
 def delete_category(
-    category_id: int,
+    category_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):

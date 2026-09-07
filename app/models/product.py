@@ -1,12 +1,12 @@
 from datetime import datetime,timezone
-
+import uuid
 from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
     Integer,
     Numeric,
-    String,
+    String,UUID
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,9 +16,10 @@ from app.core.database import Base
 class Product(Base):
     __tablename__ = "products"
 
-    id: Mapped[int] = mapped_column(
-        Integer,
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         primary_key=True,
+        default=uuid.uuid4,
         index=True
     )
 
@@ -33,12 +34,13 @@ class Product(Base):
         nullable=False
     )
 
-    category_id: Mapped[int] = mapped_column(
+    category_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True),
         ForeignKey("categories.id"),
         nullable=False
     )
 
-    supplier_id: Mapped[int] = mapped_column(
+    supplier_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("suppliers.id"),
         nullable=False
     )

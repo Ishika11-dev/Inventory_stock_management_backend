@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-
+import uuid
 
 class SupplierCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -35,7 +35,7 @@ class SupplierUpdate(BaseModel):
 
 
 class SupplierResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     name: str
     contact_email: EmailStr
     phone: str | None

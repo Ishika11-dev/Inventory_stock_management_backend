@@ -6,7 +6,7 @@ from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
 
-
+import uuid
 security = HTTPBearer()
 
 
@@ -34,7 +34,7 @@ def get_current_user(
 
     user = (
         db.query(User)
-        .filter(User.id == int(user_id))
+        .filter(User.id == uuid.UUID(user_id))
         .first()
     )
 

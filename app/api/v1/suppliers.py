@@ -13,7 +13,7 @@ from app.schemas.supplier import (
     SupplierResponse,
     SupplierUpdate,
 )
-
+import uuid
 from app.controllers import supplier_controller
 
 
@@ -57,7 +57,7 @@ def get_suppliers(
     response_model=SupplierResponse
 )
 def get_supplier(
-    supplier_id: int,
+    supplier_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin_or_staff)
 ):
@@ -72,7 +72,7 @@ def get_supplier(
     response_model=SupplierResponse
 )
 def update_supplier(
-    supplier_id: int,
+    supplier_id: uuid.UUID,
     data: SupplierUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
@@ -89,7 +89,7 @@ def update_supplier(
     status_code=status.HTTP_204_NO_CONTENT
 )
 def delete_supplier(
-    supplier_id: int,
+    supplier_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):

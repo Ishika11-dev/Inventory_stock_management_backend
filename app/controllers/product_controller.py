@@ -8,7 +8,7 @@ from app.utils.exceptions import (
     ConflictException,
     NotFoundException,
 )
-
+import uuid
 
 def create_product(
     db: Session,
@@ -46,7 +46,7 @@ def get_products(
     page: int,
     page_size: int,
     search: str | None = None,
-    category_id: int | None = None,
+    category_id: uuid.UUID | None = None,
     stock_status: str | None = None
 ):
     result = product_service.get_products(
@@ -68,7 +68,7 @@ def get_products(
 
 def get_product(
     db: Session,
-    product_id: int
+    product_id: uuid.UUID
 ):
     try:
         product = product_service.get_product(
@@ -87,7 +87,7 @@ def get_product(
 
 def update_product(
     db: Session,
-    product_id: int,
+    product_id: uuid.UUID,
     data: ProductUpdate
 ):
     try:
@@ -114,7 +114,7 @@ def update_product(
 
 def adjust_stock(
     db: Session,
-    product_id: int,
+    product_id: uuid.UUID,
     data: StockAdjustment
 ):
     try:
@@ -141,7 +141,7 @@ def adjust_stock(
 
 def delete_product(
     db: Session,
-    product_id: int
+    product_id: uuid.UUID
 ):
     try:
         product_service.delete_product(

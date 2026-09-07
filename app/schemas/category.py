@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel, Field, ConfigDict
-
+import uuid
 
 class CategoryCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=50)
@@ -22,7 +22,7 @@ class CategoryUpdate(BaseModel):
 
 
 class CategoryResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     name: str
     description: str | None
     created_at: datetime

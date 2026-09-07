@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, Field, ConfigDict
-
+import uuid
 
 StockStatus = Literal[
     "in stock",
@@ -20,11 +20,8 @@ class ProductCreate(BaseModel):
         min_length=1,
         max_length=30)
 
-    category_id: int = Field(..., gt=0)
-
-    supplier_id: int = Field(..., gt=0)
-
-    unit_price: Decimal = Field(..., gt=0)
+    category_id: uuid.UUID
+    supplier_id: uuid.UUID
 
     quantity_in_stock: int = Field(
         default=0,
@@ -46,13 +43,9 @@ class ProductUpdate(BaseModel):
         min_length=1,
         max_length=30)
 
-    category_id: int | None = Field(
-        default=None,
-        gt=0)
+    category_id: uuid.UUID | None = None
 
-    supplier_id: int | None = Field(
-        default=None,
-        gt=0)
+    supplier_id: uuid.UUID | None = None
 
     unit_price: Decimal | None = Field(
         default=None,
@@ -73,12 +66,12 @@ class StockAdjustment(BaseModel):
     reason: str = Field(..., min_length=1, max_length=255)
 
 class ProductResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     name: str
     sku: str
 
-    category_id: int
-    supplier_id: int
+    category_id: uuid.UUID
+    supplier_id: uuid.UUID
 
     unit_price: Decimal
     quantity_in_stock: int

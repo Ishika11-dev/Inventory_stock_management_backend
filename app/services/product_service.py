@@ -17,7 +17,7 @@ from app.utils.exceptions import (
     ConflictException,
     NotFoundException,
 )
-
+import uuid
 
 def calculate_stock_status(
     quantity: int,
@@ -80,7 +80,7 @@ def get_products(
     page: int,
     page_size: int,
     search: str | None = None,
-    category_id: int | None = None,
+    category_id: uuid.UUID | None = None,
     stock_status: str | None = None):
     query = select(Product).where(
         Product.is_active.is_(True) )
@@ -145,7 +145,7 @@ def get_products(
 
 def get_product(
     db: Session,
-    product_id: int
+    product_id: uuid.UUID
 ):
     product = db.scalar(
         select(Product).where(
@@ -164,7 +164,7 @@ def get_product(
 
 def update_product(
     db: Session,
-    product_id: int,
+    product_id: uuid.UUID,
     data: ProductUpdate
 ):
     product = get_product(
@@ -221,8 +221,8 @@ def update_product(
 
 def adjust_stock(
     db: Session,
-    product_id: int,
-    data: StockUpdate
+    product_id: uuid.UUID,
+    data: StockAdjustment
 ):
     product = db.get(Product, product_id)
 
@@ -252,7 +252,7 @@ def adjust_stock(
 
 def delete_product(
     db: Session,
-    product_id: int
+    product_id: uuid.UUID
 ):
     product = get_product(
         db,

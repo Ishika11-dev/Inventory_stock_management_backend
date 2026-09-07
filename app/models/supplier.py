@@ -1,6 +1,6 @@
 from datetime import datetime,timezone
-
-from sqlalchemy import DateTime, Integer, String
+import uuid
+from sqlalchemy import DateTime, Integer, String, UUID    
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -10,9 +10,10 @@ class Supplier(Base):
     __tablename__ = "suppliers"
     
 
-    id: Mapped[int] = mapped_column(
-        Integer,
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         primary_key=True,
+        default=uuid.uuid4,
         index=True
     )
 

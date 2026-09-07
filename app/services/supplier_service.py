@@ -10,7 +10,7 @@ from app.utils.exceptions import (
     ConflictException,
     NotFoundException,
 )
-
+import uuid
 
 def create_supplier(
     db: Session,
@@ -39,7 +39,7 @@ def get_suppliers(db: Session):
 
 def update_supplier(
     db: Session,
-    supplier_id: int,
+    supplier_id: uuid.UUID,
     data: SupplierUpdate
 ):
     supplier = db.get(
@@ -74,7 +74,7 @@ def update_supplier(
 
 def delete_supplier(
     db: Session,
-    supplier_id: int
+    supplier_id: uuid.UUID
 ):
     supplier = db.get(
         Supplier,

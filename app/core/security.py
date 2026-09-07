@@ -30,17 +30,17 @@ def verify_password(
         hashed_password
     )
 
-
+#creating token
 def create_access_token(data: dict):
-    to_encode = data.copy()
+    to_encode = data.copy()#copy entered data
 
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
-
+ 
     to_encode.update({"exp": expire})
 
-    return jwt.encode(
+    return jwt.encode(  #using enetered data,sec_key and algo return token
         to_encode,
         SECRET_KEY,
         algorithm=ALGORITHM

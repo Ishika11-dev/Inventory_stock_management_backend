@@ -12,7 +12,7 @@ from app.utils.exceptions import (
     ConflictException,
     NotFoundException,
 )
-
+import uuid
 
 def create_category(
     db: Session,
@@ -39,7 +39,7 @@ def get_categories(
 
 def get_category(
     db: Session,
-    category_id: int
+    category_id: uuid.UUID
 ):
     try:
         return category_service.get_category(
@@ -56,7 +56,7 @@ def get_category(
 
 def update_category(
     db: Session,
-    category_id: int,
+    category_id: uuid.UUID,
     data: CategoryUpdate
 ):
     try:
@@ -81,7 +81,7 @@ def update_category(
 
 def delete_category(
     db: Session,
-    category_id: int
+    category_id: uuid.UUID
 ):
     try:
         category_service.delete_category(
