@@ -11,6 +11,7 @@ class RegisterRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
+    confirm_password: str
     role: UserRole
 
 

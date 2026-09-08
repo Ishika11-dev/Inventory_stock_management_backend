@@ -1,5 +1,3 @@
-import email
-
 
 from sqlalchemy.orm import Session
 
@@ -11,16 +9,21 @@ from app.core.security import (
     verify_password,
     create_access_token
 )
-import uuid
 
 def register_user(
     db: Session,
     username: str,
     email: str,
     password: str,
+    confirm_password: str,
     role: UserRole
 ):
     email = email.lower()
+
+    if password != confirm_password:
+        raise ValueError(
+            "Passwords do not match"
+        )
 
     # --------------------------------
     # CHECK EMAIL + ROLE
@@ -46,13 +49,13 @@ def register_user(
 
     existing_user = (
         db.query(User)
-        .filter(User.email == email)
+        .filter(User.username == username)
         .first()
     )
 
     if existing_user:
         raise ValueError(
-            "Email already exists"
+            "Username already exists"
         )
 
     # --------------------------------

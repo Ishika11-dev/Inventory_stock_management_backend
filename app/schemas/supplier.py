@@ -1,37 +1,48 @@
 from datetime import datetime
-
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 import uuid
 
+
 class SupplierCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=100
+    )
 
     contact_email: EmailStr
 
     phone: str | None = Field(
         default=None,
-        max_length=15)
+        pattern=r"^\d{10}$",
+        description="Phone number must contain exactly 10 digits"
+    )
 
     address: str | None = Field(
         default=None,
-        max_length=255)
+        max_length=255
+    )
 
 
 class SupplierUpdate(BaseModel):
     name: str | None = Field(
         default=None,
         min_length=1,
-        max_length=100)
+        max_length=100
+    )
 
     contact_email: EmailStr | None = None
 
     phone: str | None = Field(
         default=None,
-        max_length=15)
+        pattern=r"^\d{10}$",
+        description="Phone number must contain exactly 10 digits"
+    )
 
     address: str | None = Field(
         default=None,
-        max_length=255)
+        max_length=255
+    )
 
 
 class SupplierResponse(BaseModel):
@@ -43,4 +54,5 @@ class SupplierResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(
-        from_attributes=True)
+        from_attributes=True
+    )
