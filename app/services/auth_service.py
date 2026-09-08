@@ -45,13 +45,13 @@ def register_user(
 
     existing_user = (
         db.query(User)
-        .filter(User.username == username)
+        .filter(User.email == email)
         .first()
     )
 
     if existing_user:
         raise ValueError(
-            "Username already exists"
+            "Email already exists"
         )
 
     # --------------------------------
@@ -95,7 +95,7 @@ def register_user(
 
 def authenticate_user(
     db: Session,
-    username: str,
+    email: str,
     password: str
 ):
 
@@ -105,7 +105,7 @@ def authenticate_user(
 
     user = (
         db.query(User)
-        .filter(User.username == username)
+        .filter(User.email == email)
         .first()
     )
 
@@ -127,13 +127,13 @@ def authenticate_user(
 
 def login_user(
     db: Session,
-    username: str,
+    email: str,
     password: str
 ):
 
     user = authenticate_user(
         db,
-        username,
+        email,
         password
     )
 
@@ -147,7 +147,7 @@ def login_user(
     token = create_access_token(
         {
             "sub": str(user.id),
-            "username": user.username,
+            "email": user.email,
             "role": user.role
         }
     )

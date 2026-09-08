@@ -34,19 +34,19 @@ def register(
 
 def login(
     db: Session,
-    username: str,
+    email: str,
     password: str
 ):
     token = login_user(
         db=db,
-        username=username,
+        email=email,
         password=password
     )
 
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
+            detail="Invalid email or password"
         )
 
     return {

@@ -46,6 +46,6 @@ def login(
 ):
     return auth_controller.login(
         db=db,
-        username=data.username,
+        email=data.email,
         password=data.password
     )
