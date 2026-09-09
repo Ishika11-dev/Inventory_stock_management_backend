@@ -2,22 +2,26 @@
 
 A backend REST API for managing inventory, products, categories, and suppliers.
 
-The project is built using **FastAPI**, **PostgreSQL**, **SQLAlchemy**, and **Alembic**. It follows a modular architecture with separate models, schemas, services, routes, utilities, and database configuration.
+The project is built using **FastAPI**, **PostgreSQL**, **SQLAlchemy**, and **Alembic**. It follows a modular architecture with separate models, schemas, services, routes, utilities, and database configuration.It also includes **JWT-based authentication**, **Role-Based Access Control (RBAC)**, pagination, search, filtering, and stock management.
 
 ---
 
 ## 🚀 Tech Stack
 
-- Python
-- FastAPI
-- PostgreSQL
-- SQLAlchemy
-- Alembic
-- Pydantic
-- Psycopg
-- Uvicorn
-- Postman
-- Git & GitHub
+| Technology | Purpose |
+|------------|---------|
+| **Python** | Programming language |
+| **FastAPI** | Backend web framework |
+| **PostgreSQL** | Relational database |
+| **SQLAlchemy** | ORM |
+| **Alembic** | Database migrations |
+| **Pydantic** | Data validation |
+| **JWT** | Authentication |
+| **Passlib / Password Hashing** | Secure password storage |
+| **Uvicorn** | ASGI server |
+| **Git & GitHub** | Version control |
+
+
 
 ---
 # ⚙️ Installation
@@ -158,7 +162,11 @@ private apiUrl = 'http://xyz:8000';
 ---
 
 ### 4. API Endpoints
-
+#### Authentication
+```text
+POST   /auth/register
+POST   /auth/login
+```
 #### Categories
 
 ```text
@@ -188,6 +196,7 @@ GET    /products/{product_id}
 PUT    /products/{product_id}
 DELETE /products/{product_id}
 GET    /products/summary
+PATCH  /products/{product_id}/stock
 ```
 
 
@@ -222,46 +231,56 @@ Angular Frontend
 backend/
 │
 ├── app/
+│   ├── api/
+│   │   └── v1/
+│   │       ├── auth.py
+│   │       ├── categories.py
+│   │       ├── products.py
+│   │       └── suppliers.py
 │   │
-│   ├── main.py
+│   ├── controllers/
+│   │   ├── auth_controller.py
+│   │   ├── category_controller.py
+│   │   ├── product_controller.py
+│   │   └── supplier_controller.py
 │   │
 │   ├── core/
 │   │   ├── config.py
-│   │   └── database.py
+│   │   ├── database.py
+│   │   ├── dependencies.py
+│   │   └── security.py
 │   │
 │   ├── models/
 │   │   ├── category.py
+│   │   ├── product.py
 │   │   ├── supplier.py
-│   │   └── product.py
+│   │   └── user.py
 │   │
 │   ├── schemas/
+│   │   ├── auth.py
 │   │   ├── category.py
-│   │   ├── supplier.py
-│   │   └── product.py
+│   │   ├── product.py
+│   │   └── supplier.py
 │   │
 │   ├── services/
-│   │   ├── category.py
-│   │   ├── supplier.py
-│   │   └── product.py
+│   │   ├── auth_service.py
+│   │   ├── category_service.py
+│   │   ├── product_service.py
+│   │   └── supplier_service.py
 │   │
-│   ├── routes/
-│   │   ├── category.py
-│   │   ├── supplier.py
-│   │   └── product.py
+│   ├── utils/
+│   │   ├── constraints.py
+│   │   └── exceptions.py
 │   │
-│   └── utils/
-│       ├── constraints.py
-│       ├── exceptions.py
-│       ├── response_handler.py
-│       └── status_constants.py
+│   └── main.py
 │
 ├── alembic/
 │   ├── versions/
-│   ├── env.py
-│   └── script.py.mako
+│   └── env.py
 │
 ├── .env
 ├── .gitignore
+├── alembic.ini
 ├── requirements.txt
 └── README.md
 ```
