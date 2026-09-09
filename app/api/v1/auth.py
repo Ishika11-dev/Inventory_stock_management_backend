@@ -32,6 +32,7 @@ def register(
         username=data.username,
         email=data.email,
         password=data.password,
+        confirm_password=data.confirm_password,
         role=data.role
     )
 

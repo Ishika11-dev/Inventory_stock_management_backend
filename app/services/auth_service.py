@@ -1,4 +1,4 @@
-import uuid
+
 
 from sqlalchemy.orm import Session
 
@@ -17,9 +17,13 @@ def register_user(
     username: str,
     email: str,
     password: str,
+    confirm_password: str,
     role: UserRole
 ):
     email = email.lower()
+
+    if password != confirm_password:
+        raise ValueError("Passwords do not match")
 
     # --------------------------------
     # CHECK EMAIL + ROLE
