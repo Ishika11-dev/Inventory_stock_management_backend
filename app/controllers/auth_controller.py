@@ -52,10 +52,7 @@ def login(
             detail="Invalid email or password"
         )
 
-    return {
-        "access_token": token,
-        "token_type": "bearer"
-    }
+    return token
 def logout(
     db: Session,
     token: str

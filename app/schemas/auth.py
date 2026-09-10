@@ -2,6 +2,8 @@ from pydantic import BaseModel, EmailStr, ConfigDict
 from enum import Enum
 import uuid
 
+
+
 class UserRole(str, Enum):
     ADMIN = "ADMIN"
     STAFF = "STAFF"
@@ -23,6 +25,7 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
+    role: UserRole
 
 
 class UserResponse(BaseModel):

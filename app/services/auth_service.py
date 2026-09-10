@@ -157,7 +157,12 @@ def login_user(
         }
     )
 
-    return token
+    return {
+    "access_token": token,
+    "token_type": "bearer",
+    "role": user.role
+}
+
 def logout_user(
     db: Session,
     token: str
