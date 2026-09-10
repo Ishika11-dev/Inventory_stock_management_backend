@@ -26,6 +26,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     role: UserRole
+    username: str
 
 
 class UserResponse(BaseModel):

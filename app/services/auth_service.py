@@ -160,7 +160,8 @@ def login_user(
     return {
     "access_token": token,
     "token_type": "bearer",
-    "role": user.role
+    "role": user.role,
+    "username": user.username
 }
 
 def logout_user(

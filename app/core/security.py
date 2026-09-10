@@ -38,9 +38,9 @@ def create_access_token(data: dict):
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
  
-    to_encode.update({"exp": expire,"jti": str(uuid.uuid4())})#adding expiry and unique id to the data
+    to_encode.update({"exp": expire,"jti": str(uuid.uuid4())})#adding expiry and unique id to the data(payload)
 
-    return jwt.encode(  #using enetered data,sec_key and algo return token
+    return jwt.encode(  #using enetered data,sec_key and algo create token
         to_encode,
         SECRET_KEY,
         algorithm=ALGORITHM
@@ -49,7 +49,7 @@ def create_access_token(data: dict):
 
 def decode_access_token(token: str):
     try:
-        payload = jwt.decode(
+        payload = jwt.decode(#decode/validate a JWT.
             token,
             SECRET_KEY,
             algorithms=[ALGORITHM]
