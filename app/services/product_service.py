@@ -17,7 +17,7 @@ from app.utils.exceptions import (
     ConflictException,
     NotFoundException,
 )
-import uuid
+
 
 def calculate_stock_status(
     quantity: int,
@@ -80,7 +80,7 @@ def get_products(
     page: int,
     page_size: int,
     search: str | None = None,
-    category_id: uuid.UUID | None = None,
+    category_id: int | None = None,
     stock_status: str | None = None):
     query = select(Product).where(
         Product.is_active.is_(True) )
@@ -145,7 +145,7 @@ def get_products(
 
 def get_product(
     db: Session,
-    product_id: uuid.UUID
+    product_id: int
 ):
     product = db.scalar(
         select(Product).where(
@@ -164,7 +164,7 @@ def get_product(
 
 def update_product(
     db: Session,
-    product_id: uuid.UUID,
+    product_id: int,
     data: ProductUpdate
 ):
     product = get_product(
@@ -219,40 +219,13 @@ def update_product(
 
     return product
 
-def adjust_stock(
-    db: Session,
-    product_id: uuid.UUID,
-    data: StockAdjustment
-):
-    product = db.get(Product, product_id)
 
-    if not product:
-        raise NotFoundException(
-            "Product not found"
-        )
-
-    if data.operation == "IN":
-        product.quantity_in_stock += data.quantity
-
-    elif data.operation == "OUT":
-
-        if data.quantity > product.quantity_in_stock:
-            raise ConflictException(
-                "Insufficient stock"
-            )
-
-        product.quantity_in_stock -= data.quantity
-
-    db.commit()
-    db.refresh(product)
-
-    return product
 
    
 
 def delete_product(
     db: Session,
-    product_id: uuid.UUID
+    product_id: int
 ):
     product = get_product(
         db,

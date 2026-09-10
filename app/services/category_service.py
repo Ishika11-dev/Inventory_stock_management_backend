@@ -36,6 +36,24 @@ def get_categories(db: Session):
     return db.scalars(
         select(Category)
         .order_by(Category.id)).all()
+import uuid
+
+def get_category(
+    db: Session,
+    category_id: uuid.UUID
+):
+    category = db.scalar(
+        select(Category).where(
+            Category.id == category_id
+        )
+    )
+
+    if not category:
+        raise NotFoundException(
+            "Category not found"
+        )
+
+    return category
 
 
 def update_category(

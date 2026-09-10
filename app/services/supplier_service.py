@@ -36,7 +36,22 @@ def get_suppliers(db: Session):
         .order_by(Supplier.id)
     ).all()
 
+def get_supplier(
+    db: Session,
+    supplier_id: uuid.UUID
+):
+    supplier = db.scalar(
+        select(Supplier).where(
+            Supplier.id == supplier_id
+        )
+    )
 
+    if not supplier:
+        raise NotFoundException(
+            "Supplier not found"
+        )
+
+    return supplier
 def update_supplier(
     db: Session,
     supplier_id: uuid.UUID,
