@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-
+import uuid
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.core.config import settings
@@ -32,13 +32,13 @@ def verify_password(
 
 #creating token
 def create_access_token(data: dict):
-    to_encode = data.copy()#copy entered data
+    to_encode = data.copy()#copy entered data and stores
 
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
  
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire,"jti": str(uuid.uuid4())})#adding expiry and unique id to the data
 
     return jwt.encode(  #using enetered data,sec_key and algo return token
         to_encode,

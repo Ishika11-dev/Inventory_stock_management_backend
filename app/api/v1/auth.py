@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, security, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.auth import (
@@ -6,8 +6,11 @@ from app.schemas.auth import (
     LoginRequest,
     TokenResponse,
     UserResponse,
-    UserRole
+   
 )
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+security = HTTPBearer()
 
 from app.controllers import auth_controller
 
@@ -49,4 +52,15 @@ def login(
         db=db,
         email=data.email,
         password=data.password
+    )
+@router.post("/logout")
+def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    token = credentials.credentials
+
+    return auth_controller.logout(
+        db,
+        token
     )

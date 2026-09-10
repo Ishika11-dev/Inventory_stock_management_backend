@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.schemas.auth import UserRole
+from app.services import auth_service
 from app.services.auth_service import (
     register_user,
     login_user,
@@ -55,3 +56,20 @@ def login(
         "access_token": token,
         "token_type": "bearer"
     }
+def logout(
+    db: Session,
+    token: str
+):
+    try:
+        return auth_service.logout_user(
+            db,
+            token
+        )
+
+    except ValueError as e:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )

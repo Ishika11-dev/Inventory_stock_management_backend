@@ -1,16 +1,17 @@
-
-
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 
 from app.models.user import User
+from app.models.revoked_token import RevokedToken
 from app.schemas.auth import UserRole
 
 from app.core.security import (
     hash_password,
     verify_password,
-    create_access_token
+    create_access_token,
+    decode_access_token
 )
-import uuid
+
 
 def register_user(
     db: Session,
@@ -157,3 +158,43 @@ def login_user(
     )
 
     return token
+def logout_user(
+    db: Session,
+    token: str
+):
+    payload = decode_access_token(token)
+
+    if not payload:
+        raise ValueError("Invalid or expired token")
+
+    jti = payload.get("jti")
+    exp = payload.get("exp")
+
+    if not jti or not exp:
+        raise ValueError("Invalid token")
+
+    # Check if token is already revoked
+    existing_token = (
+        db.query(RevokedToken)
+        .filter(RevokedToken.jti == jti)
+        .first()
+    )
+
+    if existing_token:
+        raise ValueError("Token already revoked")
+
+    # Store revoked token
+    revoked_token = RevokedToken(
+        jti=jti,
+        expires_at=datetime.fromtimestamp(
+            exp,
+            timezone.utc
+        )
+    )
+
+    db.add(revoked_token)
+    db.commit()
+
+    return {
+        "message": "Logout successful"
+    }
