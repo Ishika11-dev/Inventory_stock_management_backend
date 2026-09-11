@@ -30,6 +30,10 @@ class ProductCreate(BaseModel):
     reorder_level: int = Field(
         default=10,
         ge=0)
+    unit_price: Decimal = Field(
+        ...,
+        gt=0
+    )
 
 
 class ProductUpdate(BaseModel):
