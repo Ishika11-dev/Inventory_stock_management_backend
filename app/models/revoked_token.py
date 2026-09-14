@@ -18,7 +18,10 @@ class RevokedToken(Base):
         unique=True,
         nullable=False
     )
-
+    token_type = Column(
+        String(20),
+        nullable=False
+    )
     expires_at = Column(
         DateTime(timezone=True),
         nullable=False

@@ -283,6 +283,7 @@ def logout_user(
 
         revoked_access_token = RevokedToken(
             jti=access_jti,
+            token_type="access",
             expires_at=datetime.fromtimestamp(
                 access_exp,
                 timezone.utc
@@ -324,7 +325,7 @@ def logout_user(
     if not existing_refresh_token:
 
         revoked_refresh_token = RevokedToken(
-            jti=refresh_jti,
+            jti=refresh_jti,token_type="refresh",
             expires_at=datetime.fromtimestamp(
                 refresh_exp,
                 timezone.utc
