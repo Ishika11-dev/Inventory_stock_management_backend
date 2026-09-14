@@ -59,16 +59,13 @@ def refresh_token(
     db: Session,
     refresh_token: str
 ):
-
     try:
-
         return refresh_access_token(
             db=db,
             refresh_token=refresh_token
         )
 
     except ValueError as e:
-
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e)
