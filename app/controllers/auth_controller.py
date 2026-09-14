@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.schemas.auth import UserRole
 from app.services import auth_service
 from app.services.auth_service import (
+    refresh_access_token,
     register_user,
     login_user,
 )
@@ -40,7 +41,7 @@ def login(
     email: str,
     password: str
 ):
-    token = login_user(
+    token = login_user( #stores whatever login_user() returns.
         db=db,
         email=email,
         password=password
@@ -53,19 +54,42 @@ def login(
         )
 
     return token
-def logout(
+
+def refresh_token(
     db: Session,
-    token: str
+    refresh_token: str
 ):
+
     try:
-        return auth_service.logout_user(
-            db,
-            token
+
+        return refresh_access_token(
+            db=db,
+            refresh_token=refresh_token
         )
 
     except ValueError as e:
-        from fastapi import HTTPException, status
 
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
+
+
+
+
+def logout(
+    db: Session,
+    access_token: str,
+    refresh_token: str
+):
+    try:
+        return auth_service.logout_user(
+            db=db,
+            access_token=access_token,
+            refresh_token=refresh_token
+        )
+
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e)

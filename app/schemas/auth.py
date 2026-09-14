@@ -21,9 +21,16 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+class AccessTokenResponse(BaseModel):
+    access_token: str
+    token_type: str
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
     role: UserRole
     username: str
@@ -36,3 +43,6 @@ class UserResponse(BaseModel):
     role: UserRole
 
     model_config = ConfigDict(from_attributes=True)
+
+class LogoutRequest(BaseModel):
+    refresh_token: str

@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, security, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.auth import (
+    LogoutRequest,
+    RefreshTokenRequest,
     RegisterRequest,
     LoginRequest,
     TokenResponse,
     UserResponse,
-   
+    AccessTokenResponse
 )
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -55,12 +57,28 @@ def login(
     )
 @router.post("/logout")
 def logout(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    data: LogoutRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security), #holds the credentials sent in the HTTP Authorization header.
     db: Session = Depends(get_db)
 ):
-    token = credentials.credentials
+    token = credentials.credentials #store bearer's token in the variable token.
 
     return auth_controller.logout(
-        db,
-        token
+        db=db,
+        access_token=token,
+        refresh_token=data.refresh_token 
+    )
+
+@router.post(
+    "/refresh",
+    response_model=AccessTokenResponse
+)
+def refresh(
+    data: RefreshTokenRequest,
+    db: Session = Depends(get_db)
+):
+
+    return auth_controller.refresh_token(
+        db=db,
+        refresh_token=data.refresh_token
     )

@@ -8,8 +8,8 @@ from app.schemas.auth import UserRole
 from app.core.security import (
     hash_password,
     verify_password,
-    create_access_token,
-    decode_access_token
+    create_access_token,create_refresh_token,
+    decode_access_token,decode_refresh_token
 )
 
 
@@ -44,10 +44,9 @@ def register_user(
                 "STAFF users must use an @staff.com email"
             )
 
-    # --------------------------------
+   
     # CHECK USERNAME
-    # --------------------------------
-
+    
     existing_user = (
         db.query(User)
         .filter(User.email == email)
@@ -59,9 +58,9 @@ def register_user(
             "Email already exists"
         )
 
-    # --------------------------------
+    
     # CHECK EMAIL
-    # --------------------------------
+   
 
     existing_email = (
         db.query(User)
@@ -104,9 +103,9 @@ def authenticate_user(
     password: str
 ):
 
-    # --------------------------------
+  
     # FIND USER
-    # --------------------------------
+    email = email.lower()
 
     user = (
         db.query(User)
@@ -117,9 +116,9 @@ def authenticate_user(
     if not user:
         return None
 
-    # --------------------------------
+   
     # VERIFY PASSWORD
-    # --------------------------------
+   
 
     if not verify_password(
         password,
@@ -128,7 +127,6 @@ def authenticate_user(
         return None
 
     return user
-
 
 def login_user(
     db: Session,
@@ -145,11 +143,9 @@ def login_user(
     if not user:
         return None
 
-    # --------------------------------
-    # CREATE JWT
-    # --------------------------------
+    # CREATE ACCESS TOKEN
 
-    token = create_access_token(
+    access_token = create_access_token(
         {
             "sub": str(user.id),
             "email": user.email,
@@ -157,48 +153,190 @@ def login_user(
         }
     )
 
-    return {
-    "access_token": token,
-    "token_type": "bearer",
-    "role": user.role,
-    "username": user.username
-}
+    # CREATE REFRESH TOKEN
 
-def logout_user(
+    refresh_token = create_refresh_token(
+        {
+            "sub": str(user.id),
+            "email": user.email
+        }
+    )
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "role": user.role,
+        "username": user.username
+    }
+
+
+def refresh_access_token(
     db: Session,
-    token: str
+    refresh_token: str
 ):
-    payload = decode_access_token(token)
+
+    payload = decode_refresh_token(
+        refresh_token
+    )
 
     if not payload:
-        raise ValueError("Invalid or expired token")
+        raise ValueError(
+            "Invalid or expired refresh token"
+        )
+
+    # Make sure this is actually
+    # a refresh token
+
+    if payload.get("type") != "refresh":
+        raise ValueError(
+            "Invalid refresh token"
+        )
 
     jti = payload.get("jti")
-    exp = payload.get("exp")
 
-    if not jti or not exp:
-        raise ValueError("Invalid token")
+    if not jti:
+        raise ValueError(
+            "Invalid refresh token"
+        )
 
-    # Check if token is already revoked
-    existing_token = (
+    # Check whether token was revoked
+
+    revoked_token = (
         db.query(RevokedToken)
-        .filter(RevokedToken.jti == jti)
+        .filter(
+            RevokedToken.jti == jti
+        )
         .first()
     )
 
-    if existing_token:
-        raise ValueError("Token already revoked")
-
-    # Store revoked token
-    revoked_token = RevokedToken(
-        jti=jti,
-        expires_at=datetime.fromtimestamp(
-            exp,
-            timezone.utc
+    if revoked_token:
+        raise ValueError(
+            "Refresh token has been revoked"
         )
+
+    user_id = payload.get("sub")
+
+    if not user_id:
+        raise ValueError(
+            "Invalid refresh token"
+        )
+
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
     )
 
-    db.add(revoked_token)
+    if not user:
+        raise ValueError(
+            "User not found"
+        )
+
+    # Create NEW access token
+
+    new_access_token = create_access_token({
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role
+    })
+
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer"
+    }
+
+def logout_user(
+    db: Session,
+    access_token: str,
+    refresh_token: str
+):
+    # --------------------------------
+    # REVOKE ACCESS TOKEN
+    # --------------------------------
+
+    access_payload = decode_access_token(access_token)
+
+    if not access_payload:
+        raise ValueError(
+            "Invalid or expired access token"
+        )
+
+    access_jti = access_payload.get("jti")
+    access_exp = access_payload.get("exp")
+
+    if not access_jti or not access_exp:
+        raise ValueError(
+            "Invalid access token"
+        )
+
+    # Check if access token is already revoked
+    existing_access_token = (
+        db.query(RevokedToken)
+        .filter(
+            RevokedToken.jti == access_jti
+        )
+        .first()
+    )
+
+    if not existing_access_token:
+
+        revoked_access_token = RevokedToken(
+            jti=access_jti,
+            expires_at=datetime.fromtimestamp(
+                access_exp,
+                timezone.utc
+            )
+        )
+
+        db.add(revoked_access_token)
+
+    # --------------------------------
+    # REVOKE REFRESH TOKEN
+    # --------------------------------
+
+    refresh_payload = decode_refresh_token(
+        refresh_token
+    )
+
+    if not refresh_payload:
+        raise ValueError(
+            "Invalid or expired refresh token"
+        )
+
+    refresh_jti = refresh_payload.get("jti")
+    refresh_exp = refresh_payload.get("exp")
+
+    if not refresh_jti or not refresh_exp:
+        raise ValueError(
+            "Invalid refresh token"
+        )
+
+    # Check if refresh token is already revoked
+    existing_refresh_token = (
+        db.query(RevokedToken)
+        .filter(
+            RevokedToken.jti == refresh_jti
+        )
+        .first()
+    )
+
+    if not existing_refresh_token:
+
+        revoked_refresh_token = RevokedToken(
+            jti=refresh_jti,
+            expires_at=datetime.fromtimestamp(
+                refresh_exp,
+                timezone.utc
+            )
+        )
+
+        db.add(revoked_refresh_token)
+
+    # --------------------------------
+    # SAVE BOTH
+    # --------------------------------
+
     db.commit()
 
     return {
