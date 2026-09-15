@@ -31,19 +31,22 @@ def create_supplier(
 
 
 def get_suppliers(db: Session):
-    return db.scalars(
-        select(Supplier)
-        .order_by(Supplier.id)
-    ).all()
-
+    return (
+        db.query(Supplier)
+        .filter(Supplier.is_deleted.is_(False))
+        .all()
+    )
 def get_supplier(
     db: Session,
     supplier_id: uuid.UUID
 ):
-    supplier = db.scalar(
-        select(Supplier).where(
-            Supplier.id == supplier_id
+    supplier = (
+        db.query(Supplier)
+        .filter(
+            Supplier.id == supplier_id,
+            Supplier.is_deleted.is_(False)
         )
+        .first()
     )
 
     if not supplier:
@@ -52,6 +55,7 @@ def get_supplier(
         )
 
     return supplier
+
 def update_supplier(
     db: Session,
     supplier_id: uuid.UUID,
@@ -100,11 +104,5 @@ def delete_supplier(
         raise NotFoundException(
             "Supplier not found"
         )
-
-    if supplier.products:
-        raise ConflictException(
-            "Cannot delete supplier because products are linked to it"
-        )
-
-    db.delete(supplier)
+    supplier.is_deleted = True
     db.commit()

@@ -1,6 +1,6 @@
 from datetime import datetime,timezone
 import uuid
-from sqlalchemy import DateTime, Integer, String, UUID    
+from sqlalchemy import Boolean, DateTime, Integer, String, UUID    
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -46,4 +46,10 @@ class Supplier(Base):
     products = relationship(
         "Product",
         back_populates="supplier"
+    )
+
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False
     )

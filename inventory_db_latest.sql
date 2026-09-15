@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict sMGdhBYuY9VaVBJJb5zW3oqSqkwTkFDa6SE7y2pUMeQ1lERn3Xx2K4t73rWsthc
+\restrict oi2c4AzeTQQZODB7Y9JiNcHcFThMqeu08H9lfjJ5cDs31xyzfirn2pAooOtKagt
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -90,7 +90,8 @@ ALTER TABLE public.products OWNER TO postgres;
 CREATE TABLE public.revoked_tokens (
     id character varying(36) NOT NULL,
     jti character varying(36) NOT NULL,
-    expires_at timestamp with time zone NOT NULL
+    expires_at timestamp with time zone NOT NULL,
+    token_type character varying(20) NOT NULL
 );
 
 
@@ -132,7 +133,7 @@ ALTER TABLE public.users OWNER TO postgres;
 --
 
 COPY public.alembic_version (version_num) FROM stdin;
-54b58217aa63
+51da2109bb98
 \.
 
 
@@ -168,8 +169,15 @@ Skirt	sgh -0	9009.00	200	10	f	2026-08-27 11:35:54.218813	2026-09-10 15:49:03.056
 -- Data for Name: revoked_tokens; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.revoked_tokens (id, jti, expires_at) FROM stdin;
-43f1cf64-35a0-45a5-a954-e8f2b6a1ea10	7c36f781-514b-4dcd-bf90-168a579c1d81	2026-09-10 14:26:14+05:30
+COPY public.revoked_tokens (id, jti, expires_at, token_type) FROM stdin;
+43f1cf64-35a0-45a5-a954-e8f2b6a1ea10	7c36f781-514b-4dcd-bf90-168a579c1d81	2026-09-10 14:26:14+05:30	access
+98a9eb45-9ac6-4ea5-a0f1-da083b695610	baa46c69-36ae-4488-8075-487b3663d8a7	2026-09-11 15:37:16+05:30	access
+f3c76312-606f-4964-ad9b-fdfea302753d	9f90fdb6-323f-4a2f-8fb9-42268b6a9976	2026-09-14 13:40:56+05:30	access
+c1ab4987-8e2b-436a-b860-4bcc8ed0cec4	db9d046a-fad7-4e78-a4ff-2cdc5eae75c5	2026-09-14 13:54:21+05:30	access
+2a5ec763-abed-4a2a-be01-6c5e466fd98c	c93d798a-c987-4e9b-a54f-60ffbfb33ba9	2026-09-14 15:58:24+05:30	access
+8c413d04-7ddd-43e2-8bbd-bd99aec8e894	949d045a-6a05-4ce8-a760-bd571bd51245	2026-09-21 14:57:50+05:30	access
+030fd22d-90ca-4f0e-9c59-89a424a5b1d9	c82555f8-06a4-4398-bddf-7776b41eec20	2026-09-14 16:31:09+05:30	access
+0210ef60-6a89-4194-bc73-37c8a8caa589	3c624c6e-ca69-4aca-bf78-3dc623746834	2026-09-21 15:30:14+05:30	refresh
 \.
 
 
@@ -341,5 +349,5 @@ ALTER TABLE ONLY public.products
 -- PostgreSQL database dump complete
 --
 
-\unrestrict sMGdhBYuY9VaVBJJb5zW3oqSqkwTkFDa6SE7y2pUMeQ1lERn3Xx2K4t73rWsthc
+\unrestrict oi2c4AzeTQQZODB7Y9JiNcHcFThMqeu08H9lfjJ5cDs31xyzfirn2pAooOtKagt
 
