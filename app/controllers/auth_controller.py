@@ -16,7 +16,7 @@ def register(
     email: str,
     password: str,
     confirm_password: str,
-    role: UserRole
+    
 ):
     try:
         user = register_user(
@@ -25,7 +25,7 @@ def register(
             email=email,
             password=password,
             confirm_password=confirm_password,
-            role=role
+           
         )
 
         return user

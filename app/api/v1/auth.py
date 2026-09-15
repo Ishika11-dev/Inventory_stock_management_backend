@@ -55,7 +55,7 @@ def register(
         email=data.email,
         password=data.password,
         confirm_password=data.confirm_password,
-        role=data.role
+    
     )
 
 

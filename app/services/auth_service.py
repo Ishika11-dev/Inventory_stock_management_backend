@@ -12,41 +12,26 @@ from app.core.security import (
     decode_access_token,decode_refresh_token
 )
 
-
 def register_user(
     db: Session,
     username: str,
     email: str,
     password: str,
     confirm_password: str,
-    role: UserRole
 ):
     email = email.lower()
+
+    # --------------------------------
+    # CHECK PASSWORDS
+    # --------------------------------
 
     if password != confirm_password:
         raise ValueError("Passwords do not match")
 
     # --------------------------------
-    # CHECK EMAIL + ROLE
+    # CHECK DUPLICATE EMAIL
     # --------------------------------
 
-    if role == UserRole.ADMIN:
-
-        if not email.endswith("@admin.com"):
-            raise ValueError(
-                "ADMIN users must use an @admin.com email"
-            )
-
-    elif role == UserRole.STAFF:
-
-        if not email.endswith("@staff.com"):
-            raise ValueError(
-                "STAFF users must use an @staff.com email"
-            )
-
-   
-    # CHECK USERNAME
-    
     existing_user = (
         db.query(User)
         .filter(User.email == email)
@@ -58,20 +43,16 @@ def register_user(
             "Email already exists"
         )
 
-    
-    # CHECK EMAIL
-   
+    # --------------------------------
+    # DECIDE ROLE AUTOMATICALLY
+    # --------------------------------
 
-    existing_email = (
-        db.query(User)
-        .filter(User.email == email)
-        .first()
-    )
+    user_count = db.query(User).count()
 
-    if existing_email:
-        raise ValueError(
-            "Email already exists"
-        )
+    if user_count == 0:
+        role = UserRole.ADMIN
+    else:
+        role = UserRole.STAFF
 
     # --------------------------------
     # HASH PASSWORD
@@ -95,6 +76,8 @@ def register_user(
     db.refresh(user)
 
     return user
+
+    
 
 
 def authenticate_user(
@@ -135,9 +118,9 @@ def login_user(
 ):
 
     user = authenticate_user(
-        db,
-        email,
-        password
+        db=db,
+        email=email,
+        password=password
     )
 
     if not user:
@@ -149,7 +132,8 @@ def login_user(
         {
             "sub": str(user.id),
             "email": user.email,
-            "role": user.role
+            "role": user.role,
+            "username": user.username
         }
     )
 
@@ -158,7 +142,9 @@ def login_user(
     refresh_token = create_refresh_token(
         {
             "sub": str(user.id),
-            "email": user.email
+            "email": user.email,
+            "role": user.role,
+            "username": user.username
         }
     )
 
@@ -238,7 +224,8 @@ def refresh_access_token(
     new_access_token = create_access_token({
         "sub": str(user.id),
         "email": user.email,
-        "role": user.role
+        "role": user.role,
+        "username": user.username
     })
 
     return {
