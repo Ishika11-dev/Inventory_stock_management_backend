@@ -1,3 +1,4 @@
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
@@ -18,8 +19,7 @@ def register_user(
     username: str,
     email: str,
     password: str,
-    confirm_password: str,
-    role: UserRole
+    confirm_password: str
 ):
     email = email.lower()
 
@@ -27,26 +27,9 @@ def register_user(
         raise ValueError("Passwords do not match")
 
     # --------------------------------
-    # CHECK EMAIL + ROLE
+    # CHECK EMAIL
     # --------------------------------
 
-    if role == UserRole.ADMIN:
-
-        if not email.endswith("@admin.com"):
-            raise ValueError(
-                "ADMIN users must use an @admin.com email"
-            )
-
-    elif role == UserRole.STAFF:
-
-        if not email.endswith("@staff.com"):
-            raise ValueError(
-                "STAFF users must use an @staff.com email"
-            )
-
-   
-    # CHECK USERNAME
-    
     existing_user = (
         db.query(User)
         .filter(User.email == email)
@@ -58,20 +41,21 @@ def register_user(
             "Email already exists"
         )
 
-    
-    # CHECK EMAIL
-   
+    # --------------------------------
+    # DETERMINE ROLE
+    # --------------------------------
+    # The first-ever user becomes SUPER_ADMIN; everyone else registers
+    # as STAFF.
 
-    existing_email = (
-        db.query(User)
-        .filter(User.email == email)
-        .first()
+    user_count = db.scalar(
+        select(func.count()).select_from(User)
     )
 
-    if existing_email:
-        raise ValueError(
-            "Email already exists"
-        )
+    role = (
+        UserRole.SUPER_ADMIN
+        if user_count == 0
+        else UserRole.STAFF
+    )
 
     # --------------------------------
     # HASH PASSWORD

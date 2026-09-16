@@ -3,8 +3,10 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import (
-    require_admin,
-    require_admin_or_staff,
+    ensure_create_access,
+    ensure_record_access,
+    get_covered_target_ids,
+    get_current_user,
 )
 from app.models.user import User
 
@@ -13,6 +15,7 @@ from app.schemas.supplier import (
     SupplierResponse,
     SupplierUpdate,
 )
+from app.schemas.task import TargetType
 import uuid
 from app.controllers import supplier_controller
 
@@ -21,6 +24,8 @@ router = APIRouter(
     prefix="/suppliers",
     tags=["Suppliers"]
 )
+
+SUPPLIER_TYPE = TargetType.SUPPLIER.value
 
 
 @router.post(
@@ -31,8 +36,12 @@ router = APIRouter(
 def create_supplier(
     data: SupplierCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
+    ensure_create_access(
+        db, current_user, SUPPLIER_TYPE
+    )
+
     return supplier_controller.create_supplier(
         db=db,
         data=data
@@ -45,10 +54,15 @@ def create_supplier(
 )
 def get_suppliers(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_or_staff)
+    current_user: User = Depends(get_current_user)
 ):
+    covered_ids = get_covered_target_ids(
+        db, current_user, SUPPLIER_TYPE
+    )
+
     return supplier_controller.get_suppliers(
-        db=db
+        db=db,
+        covered_ids=covered_ids
     )
 
 
@@ -59,7 +73,7 @@ def get_suppliers(
 def get_supplier(
     supplier_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_or_staff)
+    current_user: User = Depends(get_current_user)
 ):
     return supplier_controller.get_supplier(
         db=db,
@@ -75,8 +89,12 @@ def update_supplier(
     supplier_id: uuid.UUID,
     data: SupplierUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
+    ensure_record_access(
+        db, current_user, SUPPLIER_TYPE, supplier_id
+    )
+
     return supplier_controller.update_supplier(
         db=db,
         supplier_id=supplier_id,
@@ -91,8 +109,12 @@ def update_supplier(
 def delete_supplier(
     supplier_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
+    ensure_record_access(
+        db, current_user, SUPPLIER_TYPE, supplier_id
+    )
+
     supplier_controller.delete_supplier(
         db=db,
         supplier_id=supplier_id

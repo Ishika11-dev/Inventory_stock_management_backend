@@ -32,9 +32,13 @@ def create_category(
 
 
 def get_categories(
-    db: Session
+    db: Session,
+    covered_ids: list | None = None
 ):
-    return category_service.get_categories(db)
+    return category_service.get_categories(
+        db,
+        covered_ids=covered_ids
+    )
 
 
 def get_category(

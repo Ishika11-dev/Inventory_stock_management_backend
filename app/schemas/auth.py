@@ -5,6 +5,9 @@ import uuid
 
 
 class UserRole(str, Enum):
+    SUPER_ADMIN = "SUPER_ADMIN"
+    ADMIN_MANAGER = "ADMIN_MANAGER"
+    STAFF_MANAGER = "STAFF_MANAGER"
     ADMIN = "ADMIN"
     STAFF = "STAFF"
 
@@ -14,7 +17,6 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     confirm_password: str
-    role: UserRole
 
 
 class LoginRequest(BaseModel):

@@ -32,9 +32,13 @@ def create_supplier(
 
 
 def get_suppliers(
-    db: Session
+    db: Session,
+    covered_ids: list | None = None
 ):
-    return supplier_service.get_suppliers(db)
+    return supplier_service.get_suppliers(
+        db,
+        covered_ids=covered_ids
+    )
 
 
 def get_supplier(

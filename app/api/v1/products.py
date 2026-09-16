@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import (
-    require_admin,
-    require_admin_or_staff
+    ensure_create_access,
+    ensure_record_access,
+    get_covered_target_ids,
+    get_current_user,
 )
-
 from app.models.user import User
 
 from app.schemas.product import (
@@ -17,6 +18,7 @@ from app.schemas.product import (
     ProductUpdate,
     StockAdjustment,
 )
+from app.schemas.task import TargetType
 
 from app.controllers import product_controller
 
@@ -32,6 +34,8 @@ router = APIRouter(
     tags=["Products"]
 )
 
+PRODUCT_TYPE = TargetType.PRODUCT.value
+
 
 @router.post(
     "/",
@@ -41,8 +45,12 @@ router = APIRouter(
 def create_product(
     data: ProductCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
+    ensure_create_access(
+        db, current_user, PRODUCT_TYPE
+    )
+
     return product_controller.create_product(
         db,
         data
@@ -55,9 +63,16 @@ def create_product(
 )
 def get_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_or_staff)
+    current_user: User = Depends(get_current_user)
 ):
-    return product_controller.get_product_summary(db)
+    covered_ids = get_covered_target_ids(
+        db, current_user, PRODUCT_TYPE
+    )
+
+    return product_controller.get_product_summary(
+        db,
+        covered_ids=covered_ids
+    )
 
 
 @router.get(
@@ -80,15 +95,20 @@ def get_products(
     ),
     stock_status: str | None = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_or_staff)
+    current_user: User = Depends(get_current_user)
 ):
+    covered_ids = get_covered_target_ids(
+        db, current_user, PRODUCT_TYPE
+    )
+
     return product_controller.get_products(
         db=db,
         page=page,
         page_size=page_size,
         search=search,
         category_id=category_id,
-        stock_status=stock_status
+        stock_status=stock_status,
+        covered_ids=covered_ids
     )
 
 
@@ -99,8 +119,7 @@ def get_products(
 def get_product(
     product_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends
-    (require_admin_or_staff)
+    current_user: User = Depends(get_current_user)
 ):
     return product_controller.get_product(
         db=db,
@@ -116,8 +135,12 @@ def update_product(
     product_id: uuid.UUID,
     data: ProductUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
+    ensure_record_access(
+        db, current_user, PRODUCT_TYPE, product_id
+    )
+
     return product_controller.update_product(
         db,
         product_id,
@@ -133,13 +156,16 @@ def adjust_stock(
     product_id: uuid.UUID,
     data: StockAdjustment,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
+    ensure_record_access(
+        db, current_user, PRODUCT_TYPE, product_id
+    )
+
     return product_controller.adjust_stock(
         db,
         product_id,
         data,
-        
     )
 
 
@@ -150,8 +176,12 @@ def adjust_stock(
 def delete_product(
     product_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_user)
 ):
+    ensure_record_access(
+        db, current_user, PRODUCT_TYPE, product_id
+    )
+
     product_controller.delete_product(
         db,
         product_id,

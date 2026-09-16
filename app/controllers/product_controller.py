@@ -1,10 +1,12 @@
 from fastapi import HTTPException,status
 from sqlalchemy.orm import Session
+from app.models.user import User
 from app.schemas.product import (ProductCreate, ProductUpdate,StockAdjustment,)
 
 from app.services import product_service
 
 from app.utils.exceptions import (
+    BadRequestException,
     ConflictException,
     NotFoundException,
 )
@@ -36,9 +38,13 @@ def create_product(
 
 
 def get_product_summary(
-    db: Session
+    db: Session,
+    covered_ids: list | None = None
 ):
-    return product_service.get_product_summary(db)
+    return product_service.get_product_summary(
+        db,
+        covered_ids=covered_ids
+    )
 
 
 def get_products(
@@ -47,7 +53,8 @@ def get_products(
     page_size: int,
     search: str | None = None,
     category_id: uuid.UUID | None = None,
-    stock_status: str | None = None
+    stock_status: str | None = None,
+    covered_ids: list | None = None
 ):
     result = product_service.get_products(
         db=db,
@@ -55,7 +62,8 @@ def get_products(
         page_size=page_size,
         search=search,
         category_id=category_id,
-        stock_status=stock_status
+        stock_status=stock_status,
+        covered_ids=covered_ids
     )
 
     result["items"] = [
@@ -135,6 +143,12 @@ def adjust_stock(
     except ConflictException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
+            detail=e.message
+        )
+
+    except BadRequestException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.message
         )
 

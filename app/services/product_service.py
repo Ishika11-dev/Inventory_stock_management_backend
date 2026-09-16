@@ -14,6 +14,7 @@ from app.schemas.product import (
 )
 
 from app.utils.exceptions import (
+    BadRequestException,
     ConflictException,
     NotFoundException,
 )
@@ -81,9 +82,14 @@ def get_products(
     page_size: int,
     search: str | None = None,
     category_id: int | None = None,
-    stock_status: str | None = None):
+    stock_status: str | None = None,
+    covered_ids: list | None = None):
     query = select(Product).where(
         Product.is_active.is_(True) )
+
+    if covered_ids is not None:
+        query = query.where(
+            Product.id.in_(covered_ids))
 
     if search:
         search_value = f"%{search}%"
@@ -237,14 +243,50 @@ def delete_product(
     db.commit()
 
 
-def get_product_summary(
-    db: Session
+def adjust_stock(
+    db: Session,
+    product_id: int,
+    data: StockAdjustment
 ):
-    products = db.scalars(
-        select(Product).where(
-            Product.is_active.is_(True)
+    product = get_product(
+        db,
+        product_id
+    )
+
+    if data.operation == "IN":
+        product.quantity_in_stock += data.quantity
+
+    elif data.operation == "OUT":
+        new_quantity = (
+            product.quantity_in_stock - data.quantity
         )
-    ).all()
+
+        if new_quantity < 0:
+            raise BadRequestException(
+                "Insufficient stock for this adjustment"
+            )
+
+        product.quantity_in_stock = new_quantity
+
+    db.commit()
+    db.refresh(product)
+
+    return product
+
+
+def get_product_summary(
+    db: Session,
+    covered_ids: list | None = None
+):
+    query = select(Product).where(
+        Product.is_active.is_(True)
+    )
+
+    if covered_ids is not None:
+        query = query.where(
+            Product.id.in_(covered_ids))
+
+    products = db.scalars(query).all()
 
     total_products = len(products)
 

@@ -5,15 +5,14 @@ from app.api.v1.categories import router as category_router
 from app.api.v1.suppliers import router as supplier_router
 from app.api.v1.products import router as product_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.users import router as users_router
+from app.api.v1.tasks import router as tasks_router
 
 app = FastAPI(
     title="Inventory & Stock Management API",
     description="Backend API for Inventory and Stock Management",
     version="1.0.0"
 )
-
-
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,6 +21,7 @@ app.add_middleware(
     allow_methods=["*"],       # must include OPTIONS
     allow_headers=["*"],
 )
+
 app.include_router(auth_router,
     prefix="/api/v1")
 
@@ -37,6 +37,16 @@ app.include_router(
 
 app.include_router(
     product_router,
+    prefix="/api/v1"
+)
+
+app.include_router(
+    users_router,
+    prefix="/api/v1"
+)
+
+app.include_router(
+    tasks_router,
     prefix="/api/v1"
 )
 

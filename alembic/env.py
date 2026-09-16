@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.core.database import Base
 
 # Import all models so Alembic detects them
-from app.models import category, supplier, product, user
+from app.models import category, supplier, product, user, task
 from app.models.revoked_token import RevokedToken
 
 

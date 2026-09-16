@@ -30,12 +30,19 @@ def create_supplier(
     return supplier
 
 
-def get_suppliers(db: Session):
-    return (
+def get_suppliers(
+    db: Session,
+    covered_ids: list | None = None):
+    query = (
         db.query(Supplier)
         .filter(Supplier.is_deleted.is_(False))
-        .all()
     )
+
+    if covered_ids is not None:
+        query = query.filter(
+            Supplier.id.in_(covered_ids))
+
+    return query.all()
 def get_supplier(
     db: Session,
     supplier_id: uuid.UUID

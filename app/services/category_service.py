@@ -30,12 +30,19 @@ def create_category(
 
     return category
 
-def get_categories(db: Session):
-    return (
+def get_categories(
+    db: Session,
+    covered_ids: list | None = None):
+    query = (
         db.query(Category)
         .filter(Category.is_deleted.is_(False))
-        .all()
     )
+
+    if covered_ids is not None:
+        query = query.filter(
+            Category.id.in_(covered_ids))
+
+    return query.all()
 
 
 def get_category(
