@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict oi2c4AzeTQQZODB7Y9JiNcHcFThMqeu08H9lfjJ5cDs31xyzfirn2pAooOtKagt
+\restrict xJH1i4g1dweAANcATeRo5PZtT2Ek2sCh4oo7pBBLGvn8ZdPCoAG6bpPI9tADTor
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -56,7 +56,8 @@ CREATE TABLE public.categories (
     name character varying(50) NOT NULL,
     description character varying(255),
     created_at timestamp without time zone NOT NULL,
-    id uuid CONSTRAINT categories_uuid_id_not_null NOT NULL
+    id uuid CONSTRAINT categories_uuid_id_not_null NOT NULL,
+    is_deleted boolean DEFAULT false NOT NULL
 );
 
 
@@ -107,7 +108,8 @@ CREATE TABLE public.suppliers (
     phone character varying(15),
     address character varying(255),
     created_at timestamp without time zone NOT NULL,
-    id uuid CONSTRAINT suppliers_uuid_id_not_null NOT NULL
+    id uuid CONSTRAINT suppliers_uuid_id_not_null NOT NULL,
+    is_deleted boolean DEFAULT false NOT NULL
 );
 
 
@@ -133,7 +135,7 @@ ALTER TABLE public.users OWNER TO postgres;
 --
 
 COPY public.alembic_version (version_num) FROM stdin;
-51da2109bb98
+9f15a6a3363d
 \.
 
 
@@ -141,11 +143,12 @@ COPY public.alembic_version (version_num) FROM stdin;
 -- Data for Name: categories; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.categories (name, description, created_at, id) FROM stdin;
-electronic	appliances	2026-08-25 10:49:34.322885	03d644b2-c214-48f3-9863-bb77aa3ab55b
-Footwear		2026-08-26 17:19:19.253331	533a15dd-5c2d-4037-81f4-de00b87e68a2
-Clothes	Things to wear on your body	2026-08-27 10:07:08.978267	ff848db9-35d3-4085-a45f-95aa4aee11bb
-Cosmetics	 such as lipstck,foundation, concealor ,and skincare items.	2026-08-27 10:11:05.528518	6227c031-67ac-497d-9c8a-8caf5f6f6e5a
+COPY public.categories (name, description, created_at, id, is_deleted) FROM stdin;
+electronic	appliances	2026-08-25 10:49:34.322885	03d644b2-c214-48f3-9863-bb77aa3ab55b	f
+Footwear		2026-08-26 17:19:19.253331	533a15dd-5c2d-4037-81f4-de00b87e68a2	f
+Clothes	Things to wear on your body	2026-08-27 10:07:08.978267	ff848db9-35d3-4085-a45f-95aa4aee11bb	f
+Cosmetics	 such as lipstck,foundation, concealor ,and skincare items.	2026-08-27 10:11:05.528518	6227c031-67ac-497d-9c8a-8caf5f6f6e5a	f
+Automobile	vehicles	2026-09-15 14:39:09.361024	4ab8dfaf-9e32-43c1-8803-6ccda8eabe0e	f
 \.
 
 
@@ -170,14 +173,8 @@ Skirt	sgh -0	9009.00	200	10	f	2026-08-27 11:35:54.218813	2026-09-10 15:49:03.056
 --
 
 COPY public.revoked_tokens (id, jti, expires_at, token_type) FROM stdin;
-43f1cf64-35a0-45a5-a954-e8f2b6a1ea10	7c36f781-514b-4dcd-bf90-168a579c1d81	2026-09-10 14:26:14+05:30	access
-98a9eb45-9ac6-4ea5-a0f1-da083b695610	baa46c69-36ae-4488-8075-487b3663d8a7	2026-09-11 15:37:16+05:30	access
-f3c76312-606f-4964-ad9b-fdfea302753d	9f90fdb6-323f-4a2f-8fb9-42268b6a9976	2026-09-14 13:40:56+05:30	access
-c1ab4987-8e2b-436a-b860-4bcc8ed0cec4	db9d046a-fad7-4e78-a4ff-2cdc5eae75c5	2026-09-14 13:54:21+05:30	access
-2a5ec763-abed-4a2a-be01-6c5e466fd98c	c93d798a-c987-4e9b-a54f-60ffbfb33ba9	2026-09-14 15:58:24+05:30	access
-8c413d04-7ddd-43e2-8bbd-bd99aec8e894	949d045a-6a05-4ce8-a760-bd571bd51245	2026-09-21 14:57:50+05:30	access
-030fd22d-90ca-4f0e-9c59-89a424a5b1d9	c82555f8-06a4-4398-bddf-7776b41eec20	2026-09-14 16:31:09+05:30	access
-0210ef60-6a89-4194-bc73-37c8a8caa589	3c624c6e-ca69-4aca-bf78-3dc623746834	2026-09-21 15:30:14+05:30	refresh
+0023e4b0-dfd1-4e96-ae8d-7478a6852d6a	e0566861-944f-4102-bd82-e3423b72c233	2026-09-15 15:38:15+05:30	access
+14dbb0e2-c1c7-42b5-b6d8-61aa39f3de89	593d289c-4125-4407-9d27-691d575d0f4b	2026-09-22 14:38:15+05:30	refresh
 \.
 
 
@@ -185,15 +182,15 @@ c1ab4987-8e2b-436a-b860-4bcc8ed0cec4	db9d046a-fad7-4e78-a4ff-2cdc5eae75c5	2026-0
 -- Data for Name: suppliers; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.suppliers (name, contact_email, phone, address, created_at, id) FROM stdin;
-ABC_pvt_ltd	abc@example.com	3746282382	london	2026-08-25 10:55:22.170831	8ff19537-9752-4646-8a4f-bc947fed6ce0
-Nike	user123@example.com	7364878233	America	2026-08-27 10:12:55.247957	dae3c283-d7bc-4871-9d4d-dab61892619a
-samsung	sanr@example.com	8268899944	kolkata	2026-08-27 11:15:50.450422	25121ee8-0cf4-4e0b-acb0-a2b32fbc9f5b
-H & M	HM@example.com	4762787122	UK	2026-08-27 11:21:41.007726	c66934cb-26bd-4762-9561-0e39fb912518
-DIOR	DIOR@example.com	4762783322	FRANCE	2026-08-27 11:24:06.946668	59d630ec-3ef8-4ab3-a347-61a9207ce32a
-Chanel	ch@example.com	4762783002	paris	2026-08-27 11:29:03.398177	d1b5bd18-55f3-4434-994c-e58f1112087a
-Volchok	vikchk@example.com	476288882	Russia	2026-08-27 11:33:57.708053	5c49dc7f-dea3-4382-9b4f-06a0f2c825c2
-jakson	jakson@gmail.com	5973053809	nsez	2026-09-08 13:30:39.605071	bf18376c-50bf-4a24-b24c-17ebad34f565
+COPY public.suppliers (name, contact_email, phone, address, created_at, id, is_deleted) FROM stdin;
+ABC_pvt_ltd	abc@example.com	3746282382	london	2026-08-25 10:55:22.170831	8ff19537-9752-4646-8a4f-bc947fed6ce0	f
+Nike	user123@example.com	7364878233	America	2026-08-27 10:12:55.247957	dae3c283-d7bc-4871-9d4d-dab61892619a	f
+samsung	sanr@example.com	8268899944	kolkata	2026-08-27 11:15:50.450422	25121ee8-0cf4-4e0b-acb0-a2b32fbc9f5b	f
+H & M	HM@example.com	4762787122	UK	2026-08-27 11:21:41.007726	c66934cb-26bd-4762-9561-0e39fb912518	f
+DIOR	DIOR@example.com	4762783322	FRANCE	2026-08-27 11:24:06.946668	59d630ec-3ef8-4ab3-a347-61a9207ce32a	f
+Chanel	ch@example.com	4762783002	paris	2026-08-27 11:29:03.398177	d1b5bd18-55f3-4434-994c-e58f1112087a	f
+Volchok	vikchk@example.com	476288882	Russia	2026-08-27 11:33:57.708053	5c49dc7f-dea3-4382-9b4f-06a0f2c825c2	f
+jakson	jakson@gmail.com	5973053809	nsez	2026-09-08 13:30:39.605071	bf18376c-50bf-4a24-b24c-17ebad34f565	f
 \.
 
 
@@ -202,16 +199,9 @@ jakson	jakson@gmail.com	5973053809	nsez	2026-09-08 13:30:39.605071	bf18376c-50bf
 --
 
 COPY public.users (username, email, password_hash, role, id) FROM stdin;
-ashish	ashish@example.com	$2b$12$LE9rm0aLB/x1a/w1xgn9e.P.VhvIzp710iix1Et2vcM1B67W7u46K	STAFF	ce55b388-2d9f-4ff8-8bec-87de33a9157a
-Manya	manya@example.com	$2b$12$08FW0Oh.X6wvxVS0Gex5EODPMmLHm1NbLo/B5GU03OtV0Ad5qCWni	ADMIN	bccbae08-d440-442d-a3ed-8ca46c74b6be
-Mana	mnya@example.com	$2b$12$5SGQcmxBU6BpTMoPIPfXle0nCLrVWVH03hcVAAaSaCEhv8yCXpSMS	AD	6679b03b-59ec-481b-bf0f-56d7d14d41ca
-priyal	user@admin.com	$2b$12$jwfIP3UD4asG0JLqGefpPuCa1.sqKpyvxKLa1gQ4V6sxpFveaZNDK	ADMIN	63bbbd46-ff49-41bf-8ec3-32a08d62cc65
-yug	yuvi@admin.com	$2b$12$tgwU.0s9lgwWXJ9HBwA9yOeqixDSIYT.3Cw29mI0h4YuRKmiazn7G	ADMIN	3a70ddab-d17b-479c-aa00-d87e159b9a42
-ishu	ishu@staff.com	$2b$12$WOCO9WuHJERLmXt..lj1QeO6IRARAgjywMXw84YJc94WhytYziCqK	STAFF	9d10c710-9bf7-41f9-93e4-d8aadd089dd7
-shivi	shivi@admin.com	$2b$12$HkNIfF/kznRJphQLM7Ou.OjmVM0WDpvbZYGHlyAxOoRTOSeyINC6u	ADMIN	bd2005ba-6eee-4f82-a0cb-736ad2f1ee70
-dev	dev@admin.com	$2b$12$uI2uxcK6e8LIpaMCNnYJ7unmxDZ26JoUzclN9VWgkhC6qm7rUD7fu	ADMIN	a0498af7-257c-45f9-88cb-87b58c921bef
-divyansh	devy@admin.com	$2b$12$IDvd59B3XWaz/0Bn/.L.cOim8YGcAf8n4Lf00bWDJUxi2YHqWQSce	ADMIN	0b8d71ed-4e5c-4b10-a5f9-7b2a416bd9d3
-yumiko	yumiko@staff.com	$2b$12$MDLmbaFHFeyCTdNod5dvau.UbCHYWPD020I735UAyCjTbXTtn.Cg6	STAFF	caaf7bb4-b9fb-4019-9336-0801a1bd1e08
+Bhavya	bhavi@gmail.com	$2b$12$iDvow9FVVkqOlo/2gVjm2OKTYbMr8F6EMspRsIwx.f4lL.N8CfXu.	ADMIN	149d6492-ba9d-47bf-b160-06f4358b2c01
+ishu	ishika@yahoo.com	$2b$12$UrS/faqclRNgFNbIrPMo/eAvnq4px/HQ07bkEaaxa4qAOWdbZpiz6	STAFF	f81f263a-76f8-44bf-a08c-be87f930fcd7
+yuvi	yuvi@gmail.com	$2b$12$Cgu4Y9oq4aIII4qgzTsWQO7Iwle5rwJAks0yv7CHN1S7ikM9gNVAO	ADMIN	c328e63a-9c64-4cab-a9a1-100d9e07c0b0
 \.
 
 
@@ -349,5 +339,5 @@ ALTER TABLE ONLY public.products
 -- PostgreSQL database dump complete
 --
 
-\unrestrict oi2c4AzeTQQZODB7Y9JiNcHcFThMqeu08H9lfjJ5cDs31xyzfirn2pAooOtKagt
+\unrestrict xJH1i4g1dweAANcATeRo5PZtT2Ek2sCh4oo7pBBLGvn8ZdPCoAG6bpPI9tADTor
 
