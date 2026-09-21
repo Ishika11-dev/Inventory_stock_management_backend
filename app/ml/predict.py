@@ -9,21 +9,48 @@ MODEL_PATH = Path(
 )
 
 
-def predict_delivery_days(features: dict) -> float:
+def predict_delivery_days(
+    features: dict
+) -> dict:
 
-    saved = joblib.load(MODEL_PATH)
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            "Delivery prediction model not found. "
+            "Run 'python -m app.ml.train' first."
+        )
 
-    model = saved["model"]
-    feature_names = saved["features"]
+    saved_model = joblib.load(
+        MODEL_PATH
+    )
+
+    model = saved_model["model"]
+
+    feature_names = saved_model["features"]
+
+    model_version = saved_model[
+        "model_version"
+    ]
+
+    training_data_type = saved_model[
+        "training_data_type"
+    ]
 
     data = pd.DataFrame(
         [features],
         columns=feature_names
     )
 
-    prediction = model.predict(data)[0]
+    prediction = model.predict(
+        data
+    )[0]
 
-    return max(
+    predicted_days = max(
         1.0,
         float(prediction)
     )
+
+    return {
+        "predicted_fulfillment_days": predicted_days,
+        "model_version": model_version,
+        "training_data_type": training_data_type,
+    }

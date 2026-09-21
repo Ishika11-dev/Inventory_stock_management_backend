@@ -9,7 +9,7 @@ from app.api.v1.users import router as users_router
 from app.api.v1.tasks import router as tasks_router
 from app.api.v1.customer import router as customer_router
 from app.api.v1.orders import router as order_router
-
+from app.api.v1.predictions import router as prediction_router
 app = FastAPI(
     title="Inventory & Stock Management API",
     description="Backend API for Inventory and Stock Management",
@@ -62,6 +62,10 @@ app.include_router(
     prefix="/api/v1"
 )
 
+app.include_router(
+    prediction_router,
+    prefix="/api/v1",
+)
 @app.get("/")
 def root():
     return {
