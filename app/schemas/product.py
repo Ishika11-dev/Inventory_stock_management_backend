@@ -14,6 +14,10 @@ StockStatus = Literal[
 
 class ProductCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
+    brand: str | None = Field(default=None, max_length=100)
+    model: str | None = Field(default=None, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    image_url: str | None = Field(default=None, max_length=500)
 
     sku: str = Field(
         ...,
@@ -55,10 +59,6 @@ class ProductUpdate(BaseModel):
         default=None,
         gt=0)
 
-    quantity_in_stock: int | None = Field(
-        default=None,
-        ge=0)
-
     reorder_level: int | None = Field(
         default=None,
         ge=0)
@@ -72,6 +72,10 @@ class StockAdjustment(BaseModel):
 class ProductResponse(BaseModel):
     id: uuid.UUID
     name: str
+    brand: str | None
+    model: str | None
+    description: str | None
+    image_url: str | None
     sku: str
 
     category_id: uuid.UUID

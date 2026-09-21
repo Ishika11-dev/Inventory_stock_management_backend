@@ -37,6 +37,18 @@ class Supplier(Base):
         nullable=True
     )
 
+    lead_time_days: Mapped[int] = mapped_column(
+        Integer,
+        default=7,
+        nullable=False
+    )
+
+    historical_delay_days: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),
@@ -45,6 +57,11 @@ class Supplier(Base):
 
     products = relationship(
         "Product",
+        back_populates="supplier"
+    )
+
+    purchase_orders = relationship(
+        "PurchaseOrder",
         back_populates="supplier"
     )
 

@@ -28,6 +28,11 @@ class Product(Base):
         nullable=False
     )
 
+    brand: Mapped[str | None] = mapped_column(String(100))
+    model: Mapped[str | None] = mapped_column(String(100))
+    description: Mapped[str | None] = mapped_column(String(1000))
+    image_url: Mapped[str | None] = mapped_column(String(500))
+
     sku: Mapped[str] = mapped_column(
         String(30),
         unique=True,
@@ -89,4 +94,17 @@ class Product(Base):
     supplier = relationship(
         "Supplier",
         back_populates="products"
+    )
+
+    order_items = relationship(
+        "OrderItem",
+        back_populates="product"
+    )
+    purchase_order_items = relationship(
+        "PurchaseOrderItem",
+        back_populates="product"
+    )
+    stock_movements = relationship(
+        "StockMovement",
+        back_populates="product"
     )

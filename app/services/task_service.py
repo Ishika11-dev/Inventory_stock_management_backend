@@ -18,8 +18,8 @@ from app.utils.exceptions import (
 )
 
 MANAGER_ROLES = {
-    UserRole.ADMIN_MANAGER.value,
-    UserRole.STAFF_MANAGER.value,
+    UserRole.INVENTORY_MANAGER.value,
+    UserRole.ORDER_MANAGER.value,
 }
 
 SUPER_ADMIN_ONLY_ROLE_CREATORS = {
@@ -28,8 +28,8 @@ SUPER_ADMIN_ONLY_ROLE_CREATORS = {
 }
 
 TEAM_MAP = {
-    UserRole.ADMIN_MANAGER.value: "ADMIN",
-    UserRole.STAFF_MANAGER.value: "STAFF",
+    UserRole.INVENTORY_MANAGER.value: UserRole.INVENTORY_STAFF.value,
+    UserRole.ORDER_MANAGER.value: UserRole.ORDER_STAFF.value,
 }
 
 TARGET_MODEL = {
@@ -131,6 +131,11 @@ def _validate_assignee(
                 f"{assigner.role} can only "
                 f"assign tasks to "
                 f"{allowed_role} users"
+            )
+
+        if assignee.manager_id != assigner.id:
+            raise ForbiddenException(
+                "Managers can only assign tasks to their own staff"
             )
 
     return assignee

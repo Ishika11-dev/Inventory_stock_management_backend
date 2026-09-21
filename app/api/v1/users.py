@@ -72,7 +72,8 @@ def update_role(
         return user_service.update_role(
             db=db,
             user_id=user_id,
-            new_role=data.role
+            new_role=data.role,
+            manager_id=data.manager_id,
         )
 
     except NotFoundException as e:

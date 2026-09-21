@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.category import Category
 from app.models.product import Product
 from app.models.supplier import Supplier
+from app.services.stock_service import adjust_stock as adjust_stock_transaction
 
 from app.schemas.product import (
     ProductCreate,
@@ -61,6 +62,10 @@ def create_product(
 
     product = Product(
         name=data.name,
+        brand=data.brand,
+        model=data.model,
+        description=data.description,
+        image_url=data.image_url,
         sku=data.sku,
         category_id=data.category_id,
         supplier_id=data.supplier_id,
@@ -248,30 +253,13 @@ def adjust_stock(
     product_id: int,
     data: StockAdjustment
 ):
-    product = get_product(
-        db,
-        product_id
+    return adjust_stock_transaction(
+        db=db,
+        product_id=product_id,
+        quantity=data.quantity,
+        operation=data.operation,
+        reason=data.reason,
     )
-
-    if data.operation == "IN":
-        product.quantity_in_stock += data.quantity
-
-    elif data.operation == "OUT":
-        new_quantity = (
-            product.quantity_in_stock - data.quantity
-        )
-
-        if new_quantity < 0:
-            raise BadRequestException(
-                "Insufficient stock for this adjustment"
-            )
-
-        product.quantity_in_stock = new_quantity
-
-    db.commit()
-    db.refresh(product)
-
-    return product
 
 
 def get_product_summary(
