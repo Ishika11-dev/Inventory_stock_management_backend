@@ -3,13 +3,13 @@ from enum import Enum
 import uuid
 
 
-
 class UserRole(str, Enum):
     SUPER_ADMIN = "SUPER_ADMIN"
-    ADMIN_MANAGER = "ADMIN_MANAGER"
-    STAFF_MANAGER = "STAFF_MANAGER"
-    ADMIN = "ADMIN"
-    STAFF = "STAFF"
+    INVENTORY_MANAGER = "INVENTORY_MANAGER"
+    ORDER_MANAGER = "ORDER_MANAGER"
+    INVENTORY_STAFF = "INVENTORY_STAFF"
+    ORDER_STAFF = "ORDER_STAFF"
+
 
 
 class RegisterRequest(BaseModel):

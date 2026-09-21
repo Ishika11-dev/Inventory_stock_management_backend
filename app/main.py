@@ -7,6 +7,8 @@ from app.api.v1.products import router as product_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.users import router as users_router
 from app.api.v1.tasks import router as tasks_router
+from app.api.v1.customer import router as customer_router
+from app.api.v1.orders import router as order_router
 
 app = FastAPI(
     title="Inventory & Stock Management API",
@@ -50,6 +52,15 @@ app.include_router(
     prefix="/api/v1"
 )
 
+app.include_router(
+    customer_router,
+    prefix="/api/v1"
+)
+
+app.include_router(
+    order_router,
+    prefix="/api/v1"
+)
 
 @app.get("/")
 def root():
