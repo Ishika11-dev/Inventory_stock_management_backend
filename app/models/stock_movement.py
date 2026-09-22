@@ -19,7 +19,7 @@ class StockMovement(Base):
 
     product_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("products.product_id"),
+        ForeignKey("products.id"),
         nullable=False,
         index=True
     )

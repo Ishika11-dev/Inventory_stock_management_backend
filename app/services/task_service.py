@@ -5,32 +5,51 @@ from app.models.user import User
 from app.models.product import Product
 from app.models.category import Category
 from app.models.supplier import Supplier
+
 from app.schemas.auth import UserRole
 from app.schemas.task import (
     TaskCreate,
     TaskUpdate,
     TargetType,
 )
+
 from app.utils.exceptions import (
     BadRequestException,
     ForbiddenException,
     NotFoundException,
 )
 
+
+# ============================================================
+# ROLE CONFIGURATION
+# ============================================================
+
 MANAGER_ROLES = {
-    UserRole.ADMIN_MANAGER.value,
-    UserRole.STAFF_MANAGER.value,
+    UserRole.INVENTORY_MANAGER.value,
+    UserRole.ORDER_MANAGER.value,
 }
 
-SUPER_ADMIN_ONLY_ROLE_CREATORS = {
+
+TASK_CREATORS = {
     UserRole.SUPER_ADMIN.value,
-    *MANAGER_ROLES,
+    UserRole.INVENTORY_MANAGER.value,
+    UserRole.ORDER_MANAGER.value,
 }
 
+
+# A manager can assign tasks only to the corresponding staff role.
 TEAM_MAP = {
-    UserRole.ADMIN_MANAGER.value: "ADMIN",
-    UserRole.STAFF_MANAGER.value: "STAFF",
+    UserRole.INVENTORY_MANAGER.value:
+        UserRole.INVENTORY_STAFF.value,
+
+    UserRole.ORDER_MANAGER.value:
+        UserRole.ORDER_STAFF.value,
 }
+
+
+# ============================================================
+# TARGET MODELS
+# ============================================================
 
 TARGET_MODEL = {
     TargetType.PRODUCT.value: Product,
@@ -38,6 +57,10 @@ TARGET_MODEL = {
     TargetType.SUPPLIER.value: Supplier,
 }
 
+
+# ============================================================
+# TARGET HELPERS
+# ============================================================
 
 def _normalize_target(
     target_type,
@@ -51,6 +74,7 @@ def _normalize_target(
     )
 
     if normalized_type == TargetType.NONE.value:
+
         if target_id is not None:
             raise BadRequestException(
                 "target_id must be null "
@@ -59,9 +83,10 @@ def _normalize_target(
 
         return normalized_type, None
 
-    # target_type is set; target_id is optional (a type-level
-    # task without a specific record is allowed so it can
-    # authorize creating new records of that type).
+    # target_type is provided.
+    # target_id can be None because a task can apply
+    # to an entire type, for example:
+    # "Create a new product."
 
     return normalized_type, target_id
 
@@ -80,17 +105,25 @@ def _get_task(
     return task
 
 
+# ============================================================
+# TASK PERMISSION HELPERS
+# ============================================================
+
 def _can_view(
     user: User,
     task: Task
 ) -> bool:
+
+    # SUPER_ADMIN can view every task.
     if user.role == UserRole.SUPER_ADMIN.value:
         return True
 
+    # Managers can view tasks they created.
     if user.role in MANAGER_ROLES:
         if task.assigned_by_id == user.id:
             return True
 
+    # Staff can view tasks assigned to them.
     if task.assigned_to_id == user.id:
         return True
 
@@ -101,15 +134,22 @@ def _can_manage(
     user: User,
     task: Task
 ) -> bool:
+
+    # SUPER_ADMIN can manage every task.
     if user.role == UserRole.SUPER_ADMIN.value:
         return True
 
+    # Managers can manage tasks they created.
     if user.role in MANAGER_ROLES:
         if task.assigned_by_id == user.id:
             return True
 
     return False
 
+
+# ============================================================
+# ASSIGNEE VALIDATION
+# ============================================================
 
 def _validate_assignee(
     db: Session,
@@ -123,18 +163,67 @@ def _validate_assignee(
             "Assigned user not found"
         )
 
+    # --------------------------------------------------------
+    # SUPER_ADMIN
+    # --------------------------------------------------------
+
+    if assigner.role == UserRole.SUPER_ADMIN.value:
+
+        # SUPER_ADMIN can assign to any manager or staff.
+        if assignee.role not in {
+            UserRole.INVENTORY_MANAGER.value,
+            UserRole.INVENTORY_STAFF.value,
+            UserRole.ORDER_MANAGER.value,
+            UserRole.ORDER_STAFF.value,
+        }:
+            raise ForbiddenException(
+                "SUPER_ADMIN can assign tasks only "
+                "to managers or staff"
+            )
+
+        return assignee
+
+    # --------------------------------------------------------
+    # MANAGERS
+    # --------------------------------------------------------
+
     allowed_role = TEAM_MAP.get(assigner.role)
 
-    if allowed_role is not None:
-        if assignee.role != allowed_role:
-            raise ForbiddenException(
-                f"{assigner.role} can only "
-                f"assign tasks to "
-                f"{allowed_role} users"
-            )
+    if allowed_role is None:
+        raise ForbiddenException(
+            "Only managers or the super admin "
+            "can assign tasks"
+        )
+
+    # Manager can only assign to their staff type.
+    if assignee.role != allowed_role:
+        raise ForbiddenException(
+            f"{assigner.role} can only assign tasks "
+            f"to {allowed_role} users"
+        )
+
+    # --------------------------------------------------------
+    # MANAGER RELATIONSHIP
+    # --------------------------------------------------------
+
+    # If the staff member already belongs to another manager,
+    # don't allow a different manager to take over the staff
+    # member through task assignment.
+    if (
+        assignee.manager_id is not None
+        and assignee.manager_id != assigner.id
+    ):
+        raise ForbiddenException(
+            "This staff member is already assigned "
+            "to another manager"
+        )
 
     return assignee
 
+
+# ============================================================
+# TARGET VALIDATION
+# ============================================================
 
 def _validate_target_exists(
     db: Session,
@@ -144,20 +233,32 @@ def _validate_target_exists(
     if normalized_type == TargetType.NONE.value:
         return
 
-    model = TARGET_MODEL[normalized_type]
+    model = TARGET_MODEL.get(normalized_type)
 
-    if normalized_id and not db.get(model, normalized_id):
+    if model is None:
+        raise BadRequestException(
+            f"Unsupported target type: {normalized_type}"
+        )
+
+    if normalized_id and not db.get(
+        model,
+        normalized_id
+    ):
         raise NotFoundException(
             f"{normalized_type} not found"
         )
 
+
+# ============================================================
+# CREATE TASK
+# ============================================================
 
 def create_task(
     db: Session,
     current_user: User,
     data: TaskCreate
 ):
-    if current_user.role not in SUPER_ADMIN_ONLY_ROLE_CREATORS:
+    if current_user.role not in TASK_CREATORS:
         raise ForbiddenException(
             "Only managers or the super admin "
             "can create tasks"
@@ -182,6 +283,15 @@ def create_task(
         normalized_id
     )
 
+    # --------------------------------------------------------
+    # Assign manager to staff member
+    # --------------------------------------------------------
+
+    if current_user.role in MANAGER_ROLES:
+
+        if assignee.manager_id is None:
+            assignee.manager_id = current_user.id
+
     task = Task(
         title=data.title,
         description=data.description,
@@ -195,24 +305,34 @@ def create_task(
     )
 
     db.add(task)
+
     db.commit()
     db.refresh(task)
 
     return task
 
 
+# ============================================================
+# LIST TASKS
+# ============================================================
+
 def list_tasks(
     db: Session,
     current_user: User
 ):
+
+    # SUPER_ADMIN sees all tasks.
     if current_user.role == UserRole.SUPER_ADMIN.value:
+
         return (
             db.query(Task)
             .order_by(Task.created_at.desc())
             .all()
         )
 
+    # Managers see tasks they created.
     if current_user.role in MANAGER_ROLES:
+
         return (
             db.query(Task)
             .filter(
@@ -227,6 +347,10 @@ def list_tasks(
         "Access denied"
     )
 
+
+# ============================================================
+# MY TASKS
+# ============================================================
 
 def my_tasks(
     db: Session,
@@ -243,14 +367,24 @@ def my_tasks(
     )
 
 
+# ============================================================
+# GET TASK
+# ============================================================
+
 def get_task(
     db: Session,
     current_user: User,
     task_id
 ):
-    task = _get_task(db, task_id)
+    task = _get_task(
+        db,
+        task_id
+    )
 
-    if not _can_view(current_user, task):
+    if not _can_view(
+        current_user,
+        task
+    ):
         raise ForbiddenException(
             "Access denied"
         )
@@ -258,15 +392,25 @@ def get_task(
     return task
 
 
+# ============================================================
+# UPDATE TASK STATUS
+# ============================================================
+
 def update_task_status(
     db: Session,
     current_user: User,
     task_id,
     status
 ):
-    task = _get_task(db, task_id)
+    task = _get_task(
+        db,
+        task_id
+    )
 
-    if not _can_view(current_user, task):
+    if not _can_view(
+        current_user,
+        task
+    ):
         raise ForbiddenException(
             "Access denied"
         )
@@ -279,15 +423,25 @@ def update_task_status(
     return task
 
 
+# ============================================================
+# UPDATE TASK
+# ============================================================
+
 def update_task(
     db: Session,
     current_user: User,
     task_id,
     data: TaskUpdate
 ):
-    task = _get_task(db, task_id)
+    task = _get_task(
+        db,
+        task_id
+    )
 
-    if not _can_manage(current_user, task):
+    if not _can_manage(
+        current_user,
+        task
+    ):
         raise ForbiddenException(
             "Access denied"
         )
@@ -296,7 +450,12 @@ def update_task(
         exclude_unset=True
     )
 
+    # --------------------------------------------------------
+    # Change assignee
+    # --------------------------------------------------------
+
     if "assigned_to_id" in update_data:
+
         assignee = _validate_assignee(
             db,
             current_user,
@@ -305,10 +464,23 @@ def update_task(
 
         update_data["assigned_to_id"] = assignee.id
 
+        # If a manager assigns a staff member and the staff
+        # member does not yet have a manager, establish it.
+        if (
+            current_user.role in MANAGER_ROLES
+            and assignee.manager_id is None
+        ):
+            assignee.manager_id = current_user.id
+
+    # --------------------------------------------------------
+    # Update target
+    # --------------------------------------------------------
+
     if (
         "target_type" in update_data
         or "target_id" in update_data
     ):
+
         new_target_type = update_data.get(
             "target_type",
             task.target_type
@@ -335,11 +507,23 @@ def update_task(
         update_data["target_type"] = normalized_type
         update_data["target_id"] = normalized_id
 
+    # --------------------------------------------------------
+    # Apply updates
+    # --------------------------------------------------------
+
     for field, value in update_data.items():
-        if field in ("priority", "status"):
+
+        if field in (
+            "priority",
+            "status"
+        ):
             value = value.value
 
-        setattr(task, field, value)
+        setattr(
+            task,
+            field,
+            value
+        )
 
     db.commit()
     db.refresh(task)
@@ -347,17 +531,28 @@ def update_task(
     return task
 
 
+# ============================================================
+# DELETE TASK
+# ============================================================
+
 def delete_task(
     db: Session,
     current_user: User,
     task_id
 ):
-    task = _get_task(db, task_id)
+    task = _get_task(
+        db,
+        task_id
+    )
 
-    if not _can_manage(current_user, task):
+    if not _can_manage(
+        current_user,
+        task
+    ):
         raise ForbiddenException(
             "Access denied"
         )
 
     db.delete(task)
+
     db.commit()

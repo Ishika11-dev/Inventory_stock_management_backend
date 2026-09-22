@@ -54,7 +54,7 @@ def register_user(
     role = (
         UserRole.SUPER_ADMIN
         if user_count == 0
-        else UserRole.STAFF
+        else UserRole.INVENTORY_STAFF
     )
 
     # --------------------------------
