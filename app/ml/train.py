@@ -1,7 +1,11 @@
 from pathlib import Path
 
 import joblib
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import (
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
+)
 from sklearn.model_selection import train_test_split
 from xgboost import XGBRegressor
 
@@ -66,14 +70,68 @@ def train_model():
         X_test
     )
 
+    # --------------------------------------------------
+    # MODEL EVALUATION
+    # --------------------------------------------------
+
     mae = mean_absolute_error(
         y_test,
         predictions
     )
 
-    print(
-        f"Mean Absolute Error: {mae:.2f} days"
+    rmse = mean_squared_error(
+        y_test,
+        predictions
+    ) ** 0.5
+
+    r2 = r2_score(
+        y_test,
+        predictions
     )
+
+    # Percentage of predictions within ±1 day
+    accuracy_within_1_day = (
+        abs(y_test - predictions) <= 1
+    ).mean() * 100
+
+    # Percentage of predictions within ±2 days
+    accuracy_within_2_days = (
+        abs(y_test - predictions) <= 2
+    ).mean() * 100
+
+    print()
+    print("======================================")
+    print("MODEL EVALUATION")
+    print("======================================")
+
+    print(
+        f"Mean Absolute Error : {mae:.2f} days"
+    )
+
+    print(
+        f"Root Mean Squared Error : {rmse:.2f} days"
+    )
+
+    print(
+        f"R² Score : {r2:.4f}"
+    )
+
+    print(
+        f"Accuracy within ±1 day : "
+        f"{accuracy_within_1_day:.2f}%"
+    )
+
+    print(
+        f"Accuracy within ±2 days : "
+        f"{accuracy_within_2_days:.2f}%"
+    )
+
+    print("======================================")
+    print()
+
+    # --------------------------------------------------
+    # SAVE MODEL
+    # --------------------------------------------------
 
     MODEL_PATH.parent.mkdir(
         parents=True,
