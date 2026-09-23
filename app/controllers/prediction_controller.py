@@ -1,7 +1,10 @@
 import uuid
 from datetime import datetime
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
 
 from app.services import prediction_service
+from app.utils.exceptions import NotFoundException, BadRequestException
 
 
 def predict_delivery(
@@ -26,3 +29,18 @@ def predict_delivery(
         processing_time=processing_time,
         shipping_time=shipping_time,
     )
+
+
+def predict_by_order_id(db: Session, order_id: uuid.UUID):
+    try:
+        return prediction_service.predict_by_order_id(db=db, order_id=order_id)
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.message
+        )
+    except BadRequestException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.message
+        )

@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
 
+from app.core.database import get_db
 from app.controllers import prediction_controller
 from app.schemas.prediction import DeliveryPredictionResponse
 
@@ -11,6 +13,22 @@ router = APIRouter(
     prefix="/predictions",
     tags=["Delivery Prediction"],
 )
+
+
+@router.post(
+    "/orders/{order_id}",
+    response_model=DeliveryPredictionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Predict delivery date for an existing order by ID (Auto-extracts DB features)"
+)
+def predict_order_delivery_by_id(
+    order_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    return prediction_controller.predict_by_order_id(
+        db=db,
+        order_id=order_id
+    )
 
 
 @router.post(

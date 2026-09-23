@@ -161,43 +161,21 @@ private apiUrl = 'http://xyz:8000';
 
 ---
 
-### 4. API Endpoints
-#### Authentication
-```text
-POST   /auth/register
-POST   /auth/login
-```
-#### Categories
+### 4. API Modules & Endpoints Overview
 
-```text
-GET    /categories
-POST   /categories
-GET    /categories/{category_id}
-PUT    /categories/{category_id}
-DELETE /categories/{category_id}
-```
+The backend exposes 9 active modular API routes under `/api/v1`:
 
-#### Suppliers
+1. **Authentication** (`/api/v1/auth`): Register, Login, Refresh, Logout (with RevokedToken blacklist).
+2. **Users & Teams** (`/api/v1/users`): Super admin user list, team retrieval by managers, role updates.
+3. **Categories** (`/api/v1/categories`): Category CRUD with soft deletion.
+4. **Suppliers** (`/api/v1/suppliers`): Supplier CRUD with soft deletion.
+5. **Products** (`/api/v1/products`): Full product management, SKU validation, stock adjustments (IN/OUT), pagination, and inventory summary metrics.
+6. **Customers** (`/api/v1/customers`): Customer contact and profile CRUD.
+7. **Orders** (`/api/v1/orders`): Order placement, item calculation, inventory availability check, and status state machine.
+8. **Tasks** (`/api/v1/tasks`): Manager-to-staff duty delegation and task-based access control (ABAC).
+9. **Delivery Predictions** (`/api/v1/predictions`): Machine Learning (XGBoost) delivery fulfillment forecasting.
 
-```text
-GET    /suppliers
-POST   /suppliers
-GET    /suppliers/{supplier_id}
-PUT    /suppliers/{supplier_id}
-DELETE /suppliers/{supplier_id}
-```
-
-#### Products
-
-```text
-GET    /products
-POST   /products
-GET    /products/{product_id}
-PUT    /products/{product_id}
-DELETE /products/{product_id}
-GET    /products/summary
-PATCH  /products/{product_id}/stock
-```
+> 📖 **Full API Reference**: For exhaustive details, payloads, request bodies, and responses for every endpoint, see [API_DOCUMENTATION.md](file:///c:/Users/Ishika/Desktop/inv-mgmt/backend/API_DOCUMENTATION.md).
 
 
 ---
