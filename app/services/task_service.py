@@ -1,3 +1,4 @@
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.task import Task
@@ -326,10 +327,13 @@ def list_tasks(
     # SUPER_ADMIN sees all tasks.
     if current_user.role == UserRole.SUPER_ADMIN.value:
         query = db.query(Task)
-    # Managers see tasks they created.
+    # Managers see tasks they created or assigned to them.
     elif current_user.role in MANAGER_ROLES:
         query = db.query(Task).filter(
-            Task.assigned_by_id == current_user.id
+            or_(
+                Task.assigned_by_id == current_user.id,
+                Task.assigned_to_id == current_user.id,
+            )
         )
     else:
         raise ForbiddenException("Access denied")

@@ -263,14 +263,7 @@ def ensure_create_access(
     user: User,
     target_type: str,
 ):
-    """
-    Check whether a user can create a new record.
-
-    SUPER_ADMIN and managers have unrestricted access.
-
-    Staff must have an active task for the
-    requested target type.
-    """
+    
 
     if has_unrestricted_access(user):
         return

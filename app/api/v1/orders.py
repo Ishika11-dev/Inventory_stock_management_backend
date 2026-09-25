@@ -37,8 +37,10 @@ def create_order(
 ):
     return order_controller.create_order(
         db=db,
-        data=data
+        data=data,
+        current_user=current_user
     )
+
 
 
 @router.get(

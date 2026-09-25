@@ -7,13 +7,17 @@ from app.models.customer import Customer
 from app.models.order import Order
 from app.models.order_item import OrderItem
 from app.models.product import Product
+from app.models.task import Task
+from app.models.user import User
+from app.schemas.auth import UserRole
 from app.schemas.order import OrderCreate, OrderStatus
 from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 
 
 def create_order(
     db: Session,
-    data: OrderCreate
+    data: OrderCreate,
+    current_user: User | None = None
 ):
     # ---------------------------------------------------------
     # 1. Check customer
@@ -46,6 +50,7 @@ def create_order(
     total_amount = Decimal("0.00")
 
     has_shortage = False
+    shortages = []
 
     # ---------------------------------------------------------
     # 3. Process each product
@@ -56,7 +61,7 @@ def create_order(
         product = (
             db.query(Product)
             .filter(
-                Product.product_id == item_data.product_id
+                Product.id == item_data.product_id
             )
             .first()
         )
@@ -86,11 +91,13 @@ def create_order(
         total_amount += subtotal
 
         # -----------------------------------------------------
-        # 6. Check stock
+        # 6. Check stock & record shortage
         # -----------------------------------------------------
 
         if product.quantity_in_stock < item_data.quantity:
             has_shortage = True
+            shortage_qty = item_data.quantity - product.quantity_in_stock
+            shortages.append((product, item_data.quantity, shortage_qty))
 
         # -----------------------------------------------------
         # 7. Create order item
@@ -98,7 +105,7 @@ def create_order(
 
         order_item = OrderItem(
             order_id=order.id,
-            product_id=product.product_id,
+            product_id=product.id,
             quantity=item_data.quantity,
             unit_price=unit_price,
             subtotal=subtotal
@@ -113,11 +120,45 @@ def create_order(
     order.total_amount = total_amount
 
     # ---------------------------------------------------------
-    # 9. Determine initial status
+    # 9. Determine initial status & dispatch shortage alerts
     # ---------------------------------------------------------
 
     if has_shortage:
         order.status = OrderStatus.AWAITING_STOCK.value
+
+        # Automatically assign high-priority restock task to Inventory Manager
+        inventory_manager = (
+            db.query(User)
+            .filter(User.role == UserRole.INVENTORY_MANAGER.value)
+            .first()
+        )
+        if not inventory_manager:
+            inventory_manager = (
+                db.query(User)
+                .filter(User.role == UserRole.SUPER_ADMIN.value)
+                .first()
+            )
+
+        assigned_by = current_user if current_user else inventory_manager
+
+        if inventory_manager and assigned_by:
+            for prod, req_qty, missing_qty in shortages:
+                task = Task(
+                    title=f"Restock Required: {prod.name} (Shortage: {missing_qty})",
+                    description=(
+                        f"Order #{str(order.id)[:8]} has a shortage of {missing_qty} units "
+                        f"for '{prod.name}' (SKU: {prod.sku}). Customer ordered {req_qty}, "
+                        f"current warehouse stock is {prod.quantity_in_stock}. "
+                        f"Please place replenishment order with supplier."
+                    ),
+                    priority="HIGH",
+                    status="PENDING",
+                    assigned_to_id=inventory_manager.id,
+                    assigned_by_id=assigned_by.id,
+                    target_type="PRODUCT",
+                    target_id=prod.id,
+                )
+                db.add(task)
     else:
         order.status = OrderStatus.CONFIRMED.value
 

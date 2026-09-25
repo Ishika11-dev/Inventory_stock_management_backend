@@ -779,7 +779,8 @@ Cookie: refresh_token=<refresh_token>
   "updated_at": "2026-09-23T14:45:00Z"
 }
 ```
-*(If stock for any item is lower than requested quantity, status defaults to `"AWAITING_STOCK"`).*
+*(If warehouse stock for any ordered item is lower than requested quantity, order status is automatically set to `"AWAITING_STOCK"`, and the system instantly dispatches a high-priority `"Restock Required: <Product Name> (Shortage: <Qty>)"` task assigned directly to the `INVENTORY_MANAGER` with product scope).*
+
 
 #### 7.2 List Orders (Paginated)
 - **Method**: `GET`

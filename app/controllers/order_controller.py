@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
+from app.models.user import User
 from app.schemas.order import OrderCreate, OrderStatus
 from app.services import order_service
 from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
@@ -9,12 +10,15 @@ from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 
 def create_order(
     db: Session,
-    data: OrderCreate
+    data: OrderCreate,
+    current_user: User | None = None
 ):
     return order_service.create_order(
         db=db,
-        data=data
+        data=data,
+        current_user=current_user
     )
+
 
 
 def get_order(
