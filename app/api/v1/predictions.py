@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models.user import User
 from app.controllers import prediction_controller
 from app.schemas.prediction import DeliveryPredictionResponse
 
@@ -23,7 +25,8 @@ router = APIRouter(
 )
 def predict_order_delivery_by_id(
     order_id: uuid.UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return prediction_controller.predict_by_order_id(
         db=db,
@@ -45,8 +48,9 @@ def predict_delivery(
     supplier_lead_time: int,
     processing_time: int,
     shipping_time: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-
     return prediction_controller.predict_delivery(
         order_id=order_id,
         order_date=order_date,

@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models.user import User
 from app.controllers import customer_controller
 from app.schemas.customer import (
     CustomerCreate,
@@ -24,7 +26,8 @@ router = APIRouter(
 )
 def create_customer(
     data: CustomerCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return customer_controller.create_customer(
         db=db,
@@ -37,7 +40,8 @@ def create_customer(
     response_model=list[CustomerResponse]
 )
 def get_customers(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return customer_controller.list_customers(db)
 
@@ -48,7 +52,8 @@ def get_customers(
 )
 def get_customer(
     customer_id: uuid.UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return customer_controller.get_customer(
         db=db,
@@ -63,7 +68,8 @@ def get_customer(
 def update_customer(
     customer_id: uuid.UUID,
     data: CustomerUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return customer_controller.update_customer(
         db=db,

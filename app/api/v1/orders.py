@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models.user import User
 from app.controllers import order_controller
 from app.schemas.order import (
     OrderCreate,
@@ -24,7 +26,8 @@ router = APIRouter(
 )
 def create_order(
     data: OrderCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return order_controller.create_order(
         db=db,
@@ -37,7 +40,8 @@ def create_order(
     response_model=list[OrderResponse]
 )
 def get_orders(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return order_controller.list_orders(
         db=db
@@ -50,7 +54,8 @@ def get_orders(
 )
 def get_order(
     order_id: uuid.UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return order_controller.get_order(
         db=db,
@@ -65,7 +70,8 @@ def get_order(
 def update_order_status(
     order_id: uuid.UUID,
     data: OrderStatusUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return order_controller.update_order_status(
         db=db,
