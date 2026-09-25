@@ -283,42 +283,60 @@ Cookie: refresh_token=<refresh_token>
 
 ### 2. Users & Team Management (`/api/v1/users`)
 
-#### 2.1 List All Users
+#### 2.1 List All Users (Paginated)
 - **Method**: `GET`
-- **Path**: `/users/`
+- **Path**: `/users/?page=1&page_size=10`
 - **Auth Required**: Bearer Token (`SUPER_ADMIN` only)
+- **Query Parameters**:
+  - `page` (int, default: 1, ge: 1)
+  - `page_size` (int, default: 10, ge: 1, le: 100)
 - **Response (`200 OK`)**:
 ```json
-[
-  {
-    "id": "e0b5fa21-5a04-4c47-8a6f-31b32d2012a4",
-    "username": "ishika_dev",
-    "email": "ishika@example.com",
-    "role": "SUPER_ADMIN"
-  },
-  {
-    "id": "c328e63a-9c64-4cab-a9a1-100d9e07c0b0",
-    "username": "john_inv_mgr",
-    "email": "john@example.com",
-    "role": "INVENTORY_MANAGER"
-  }
-]
+{
+  "items": [
+    {
+      "id": "e0b5fa21-5a04-4c47-8a6f-31b32d2012a4",
+      "username": "ishika_dev",
+      "email": "ishika@example.com",
+      "role": "SUPER_ADMIN"
+    },
+    {
+      "id": "c328e63a-9c64-4cab-a9a1-100d9e07c0b0",
+      "username": "john_inv_mgr",
+      "email": "john@example.com",
+      "role": "INVENTORY_MANAGER"
+    }
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total": 2,
+  "total_pages": 1
+}
 ```
 
-#### 2.2 List Managed Team Members
+#### 2.2 List Managed Team Members (Paginated)
 - **Method**: `GET`
-- **Path**: `/users/team`
+- **Path**: `/users/team?page=1&page_size=10`
 - **Auth Required**: Bearer Token (`INVENTORY_MANAGER` or `ORDER_MANAGER`)
+- **Query Parameters**:
+  - `page` (int, default: 1, ge: 1)
+  - `page_size` (int, default: 10, ge: 1, le: 100)
 - **Response (`200 OK`)**:
 ```json
-[
-  {
-    "id": "f81f263a-76f8-44bf-a08c-be87f930fcd7",
-    "username": "staff_member_1",
-    "email": "staff1@example.com",
-    "role": "INVENTORY_STAFF"
-  }
-]
+{
+  "items": [
+    {
+      "id": "f81f263a-76f8-44bf-a08c-be87f930fcd7",
+      "username": "staff_member_1",
+      "email": "staff1@example.com",
+      "role": "INVENTORY_STAFF"
+    }
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total": 1,
+  "total_pages": 1
+}
 ```
 
 #### 2.3 Update User Role
@@ -366,20 +384,29 @@ Cookie: refresh_token=<refresh_token>
 }
 ```
 
-#### 3.2 List Categories
+#### 3.2 List Categories (Paginated)
 - **Method**: `GET`
-- **Path**: `/categories/`
+- **Path**: `/categories/?page=1&page_size=10`
 - **Auth Required**: Bearer Token
+- **Query Parameters**:
+  - `page` (int, default: 1, ge: 1)
+  - `page_size` (int, default: 10, ge: 1, le: 100)
 - **Response (`200 OK`)**:
 ```json
-[
-  {
-    "id": "533a15dd-5c2d-4037-81f4-de00b87e68a2",
-    "name": "Electronics",
-    "description": "Smartphones, laptops, monitors and home appliances",
-    "created_at": "2026-09-23T14:30:00Z"
-  }
-]
+{
+  "items": [
+    {
+      "id": "533a15dd-5c2d-4037-81f4-de00b87e68a2",
+      "name": "Electronics",
+      "description": "Smartphones, laptops, monitors and home appliances",
+      "created_at": "2026-09-23T14:30:00Z"
+    }
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total": 1,
+  "total_pages": 1
+}
 ```
 
 #### 3.3 Get Category by ID
@@ -452,22 +479,31 @@ Cookie: refresh_token=<refresh_token>
 }
 ```
 
-#### 4.2 List Suppliers
+#### 4.2 List Suppliers (Paginated)
 - **Method**: `GET`
-- **Path**: `/suppliers/`
+- **Path**: `/suppliers/?page=1&page_size=10`
 - **Auth Required**: Bearer Token
+- **Query Parameters**:
+  - `page` (int, default: 1, ge: 1)
+  - `page_size` (int, default: 10, ge: 1, le: 100)
 - **Response (`200 OK`)**:
 ```json
-[
-  {
-    "id": "8ff19537-9752-4646-8a4f-bc947fed6ce0",
-    "name": "Samsung Logistics Corp",
-    "contact_email": "orders@samsung-logistics.com",
-    "phone": "9876543210",
-    "address": "Building 5, Tech Innovation Park, Seoul",
-    "created_at": "2026-09-23T14:32:00Z"
-  }
-]
+{
+  "items": [
+    {
+      "id": "8ff19537-9752-4646-8a4f-bc947fed6ce0",
+      "name": "Samsung Logistics Corp",
+      "contact_email": "orders@samsung-logistics.com",
+      "phone": "9876543210",
+      "address": "Building 5, Tech Innovation Park, Seoul",
+      "created_at": "2026-09-23T14:32:00Z"
+    }
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total": 1,
+  "total_pages": 1
+}
 ```
 
 #### 4.3 Get Supplier by ID
@@ -656,10 +692,32 @@ Cookie: refresh_token=<refresh_token>
 }
 ```
 
-#### 6.2 List Customers
+#### 6.2 List Customers (Paginated)
 - **Method**: `GET`
-- **Path**: `/customers/`
-- **Response (`200 OK`)**: List of `CustomerResponse` objects ordered by creation date descending.
+- **Path**: `/customers/?page=1&page_size=10`
+- **Query Parameters**:
+  - `page` (int, default: 1, ge: 1)
+  - `page_size` (int, default: 10, ge: 1, le: 100)
+- **Response (`200 OK`)**:
+```json
+{
+  "items": [
+    {
+      "id": "18c8e11a-0db5-48b2-8419-f521b44d2162",
+      "name": "Sarah Connor",
+      "email": "sarah.connor@example.com",
+      "phone": "+1-555-0199",
+      "address": "42 Cyberdyne Way, Los Angeles, CA",
+      "created_at": "2026-09-23T14:40:00Z",
+      "updated_at": "2026-09-23T14:40:00Z"
+    }
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total": 1,
+  "total_pages": 1
+}
+```
 
 #### 6.3 Get Customer by ID
 - **Method**: `GET`
@@ -723,10 +781,43 @@ Cookie: refresh_token=<refresh_token>
 ```
 *(If stock for any item is lower than requested quantity, status defaults to `"AWAITING_STOCK"`).*
 
-#### 7.2 List Orders
+#### 7.2 List Orders (Paginated)
 - **Method**: `GET`
-- **Path**: `/orders/`
-- **Response (`200 OK`)**: List of all orders with nested items, ordered by latest date.
+- **Path**: `/orders/?page=1&page_size=10`
+- **Query Parameters**:
+  - `page` (int, default: 1, ge: 1)
+  - `page_size` (int, default: 10, ge: 1, le: 100)
+- **Response (`200 OK`)**:
+```json
+{
+  "items": [
+    {
+      "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "customer_id": "18c8e11a-0db5-48b2-8419-f521b44d2162",
+      "order_date": "2026-09-23T14:45:00Z",
+      "status": "CONFIRMED",
+      "total_amount": "2599.98",
+      "predicted_delivery_date": null,
+      "actual_delivery_date": null,
+      "items": [
+        {
+          "id": "3146d6b8-20cf-46d9-813f-14f762294101",
+          "product_id": "733784bb-7a4b-45fa-a9c8-f23677d3a141",
+          "quantity": 2,
+          "unit_price": "1299.99",
+          "subtotal": "2599.98"
+        }
+      ],
+      "created_at": "2026-09-23T14:45:00Z",
+      "updated_at": "2026-09-23T14:45:00Z"
+    }
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total": 1,
+  "total_pages": 1
+}
+```
 
 #### 7.3 Get Order by ID
 - **Method**: `GET`
@@ -783,10 +874,13 @@ Cookie: refresh_token=<refresh_token>
 }
 ```
 
-#### 8.2 List Tasks (Manager / Super Admin)
+#### 8.2 List Tasks (Manager / Super Admin - Paginated)
 - **Method**: `GET`
-- **Path**: `/tasks/`
+- **Path**: `/tasks/?page=1&page_size=10`
 - **Auth Required**: Bearer Token (`SUPER_ADMIN` sees all; managers see tasks they initiated).
+- **Query Parameters**:
+  - `page` (int, default: 1, ge: 1)
+  - `page_size` (int, default: 10, ge: 1, le: 100)
 - **Response (`200 OK`)**:
 ```json
 {
@@ -803,15 +897,22 @@ Cookie: refresh_token=<refresh_token>
       "created_at": "2026-09-23T14:50:00Z",
       "updated_at": "2026-09-23T14:50:00Z"
     }
-  ]
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total": 1,
+  "total_pages": 1
 }
 ```
 
-#### 8.3 Get Current User's Tasks
+#### 8.3 Get Current User's Tasks (Paginated)
 - **Method**: `GET`
-- **Path**: `/tasks/my`
+- **Path**: `/tasks/my?page=1&page_size=10`
 - **Auth Required**: Bearer Token (Any authenticated role; returns tasks where `assigned_to_id == current_user.id`).
-- **Response (`200 OK`)**: Same structure as list tasks.
+- **Query Parameters**:
+  - `page` (int, default: 1, ge: 1)
+  - `page_size` (int, default: 10, ge: 1, le: 100)
+- **Response (`200 OK`)**: Same paginated structure as list tasks.
 
 #### 8.4 Get Task Details
 - **Method**: `GET`

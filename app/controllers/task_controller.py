@@ -10,6 +10,7 @@ from app.schemas.task import (
 
 from app.services import task_service
 
+from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 from app.utils.exceptions import (
     BadRequestException,
     ForbiddenException,
@@ -50,12 +51,16 @@ def create_task(
 
 def list_tasks(
     db: Session,
-    current_user: User
+    current_user: User,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
 ):
     try:
         return task_service.list_tasks(
             db=db,
-            current_user=current_user
+            current_user=current_user,
+            page=page,
+            page_size=page_size,
         )
 
     except ForbiddenException as e:
@@ -67,11 +72,15 @@ def list_tasks(
 
 def my_tasks(
     db: Session,
-    current_user: User
+    current_user: User,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
 ):
     return task_service.my_tasks(
         db=db,
-        current_user=current_user
+        current_user=current_user,
+        page=page,
+        page_size=page_size,
     )
 
 

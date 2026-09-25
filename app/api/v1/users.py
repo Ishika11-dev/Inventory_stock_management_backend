@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 import uuid
 
@@ -10,7 +10,12 @@ from app.core.dependencies import (
 from app.models.user import User
 
 from app.schemas.auth import UserResponse
-from app.schemas.user import RoleUpdateRequest
+from app.schemas.user import RoleUpdateRequest, UserListResponse
+from app.utils.constraints import (
+    DEFAULT_PAGE,
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+)
 
 from app.services import user_service
 
@@ -28,27 +33,37 @@ router = APIRouter(
 
 @router.get(
     "/",
-    response_model=list[UserResponse]
+    response_model=UserListResponse
 )
 def get_users(
+    page: int = Query(DEFAULT_PAGE, ge=1, description="Page number"),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_super_admin),
 ):
-    return user_service.get_users(db)
+    return user_service.get_users(
+        db=db,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get(
     "/team",
-    response_model=list[UserResponse]
+    response_model=UserListResponse
 )
 def get_team(
+    page: int = Query(DEFAULT_PAGE, ge=1, description="Page number"),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager),
 ):
     try:
         return user_service.get_team(
             db=db,
-            manager=current_user
+            manager=current_user,
+            page=page,
+            page_size=page_size,
         )
 
     except ForbiddenException as e:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -12,8 +12,14 @@ from app.models.user import User
 
 from app.schemas.category import (
     CategoryCreate,
+    CategoryListResponse,
     CategoryResponse,
     CategoryUpdate,
+)
+from app.utils.constraints import (
+    DEFAULT_PAGE,
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
 )
 from app.schemas.task import TargetType
 
@@ -50,9 +56,11 @@ def create_category(
 
 @router.get(
     "/",
-    response_model=list[CategoryResponse]
+    response_model=CategoryListResponse
 )
 def get_categories(
+    page: int = Query(DEFAULT_PAGE, ge=1, description="Page number"),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -62,7 +70,9 @@ def get_categories(
 
     return category_controller.get_categories(
         db=db,
-        covered_ids=covered_ids
+        covered_ids=covered_ids,
+        page=page,
+        page_size=page_size
     )
 
 

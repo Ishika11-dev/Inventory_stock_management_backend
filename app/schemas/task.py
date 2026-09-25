@@ -122,3 +122,7 @@ class TaskResponse(BaseModel):
 
 class TaskListResponse(BaseModel):
     items: list[TaskResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

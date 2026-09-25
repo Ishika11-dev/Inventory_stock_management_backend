@@ -70,3 +70,11 @@ class OrderResponse(BaseModel):
 
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
+
+
+class OrderListResponse(BaseModel):
+    items: list[OrderResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

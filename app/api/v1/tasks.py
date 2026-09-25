@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 import uuid
 
@@ -15,6 +15,11 @@ from app.schemas.task import (
     TaskResponse,
     TaskStatusUpdate,
     TaskUpdate,
+)
+from app.utils.constraints import (
+    DEFAULT_PAGE,
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
 )
 
 from app.controllers import task_controller
@@ -49,17 +54,19 @@ def create_task(
     response_model=TaskListResponse
 )
 def get_tasks(
+    page: int = Query(DEFAULT_PAGE, ge=1, description="Page number"),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page"),
     db: Session = Depends(get_db),
     current_user: User = Depends(
         require_super_admin_or_manager
     ),
 ):
-    tasks = task_controller.list_tasks(
+    return task_controller.list_tasks(
         db=db,
-        current_user=current_user
+        current_user=current_user,
+        page=page,
+        page_size=page_size,
     )
-
-    return {"items": tasks}
 
 
 @router.get(
@@ -67,15 +74,17 @@ def get_tasks(
     response_model=TaskListResponse
 )
 def get_my_tasks(
+    page: int = Query(DEFAULT_PAGE, ge=1, description="Page number"),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    tasks = task_controller.my_tasks(
+    return task_controller.my_tasks(
         db=db,
-        current_user=current_user
+        current_user=current_user,
+        page=page,
+        page_size=page_size,
     )
-
-    return {"items": tasks}
 
 
 @router.get(

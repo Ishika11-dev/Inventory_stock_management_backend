@@ -60,3 +60,11 @@ class SupplierResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True
     )
+
+
+class SupplierListResponse(BaseModel):
+    items: list[SupplierResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

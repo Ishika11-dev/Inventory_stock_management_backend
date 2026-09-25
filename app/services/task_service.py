@@ -13,6 +13,7 @@ from app.schemas.task import (
     TargetType,
 )
 
+from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 from app.utils.exceptions import (
     BadRequestException,
     ForbiddenException,
@@ -318,34 +319,33 @@ def create_task(
 
 def list_tasks(
     db: Session,
-    current_user: User
+    current_user: User,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
 ):
-
     # SUPER_ADMIN sees all tasks.
     if current_user.role == UserRole.SUPER_ADMIN.value:
-
-        return (
-            db.query(Task)
-            .order_by(Task.created_at.desc())
-            .all()
-        )
-
+        query = db.query(Task)
     # Managers see tasks they created.
-    if current_user.role in MANAGER_ROLES:
-
-        return (
-            db.query(Task)
-            .filter(
-                Task.assigned_by_id
-                == current_user.id
-            )
-            .order_by(Task.created_at.desc())
-            .all()
+    elif current_user.role in MANAGER_ROLES:
+        query = db.query(Task).filter(
+            Task.assigned_by_id == current_user.id
         )
+    else:
+        raise ForbiddenException("Access denied")
 
-    raise ForbiddenException(
-        "Access denied"
-    )
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(Task.created_at.desc()).offset(offset).limit(page_size).all()
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 # ============================================================
@@ -354,17 +354,25 @@ def list_tasks(
 
 def my_tasks(
     db: Session,
-    current_user: User
+    current_user: User,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
 ):
-    return (
-        db.query(Task)
-        .filter(
-            Task.assigned_to_id
-            == current_user.id
-        )
-        .order_by(Task.created_at.desc())
-        .all()
+    query = db.query(Task).filter(
+        Task.assigned_to_id == current_user.id
     )
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(Task.created_at.desc()).offset(offset).limit(page_size).all()
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 # ============================================================

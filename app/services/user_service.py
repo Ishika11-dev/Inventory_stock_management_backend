@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.auth import UserRole
 
+from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 from app.utils.exceptions import (
     BadRequestException,
     ForbiddenException,
@@ -11,17 +12,31 @@ from app.utils.exceptions import (
 )
 
 
-def get_users(db: Session):
-    return (
-        db.query(User)
-        .order_by(User.username)
-        .all()
-    )
+def get_users(
+    db: Session,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
+):
+    query = db.query(User)
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(User.username).offset(offset).limit(page_size).all()
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 def get_team(
     db: Session,
-    manager: User
+    manager: User,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
 ):
     """
     Return only the staff members who are directly
@@ -37,14 +52,22 @@ def get_team(
             "No team for this role"
         )
 
-    return (
-        db.query(User)
-        .filter(
-            User.manager_id == manager.id
-        )
-        .order_by(User.username)
-        .all()
+    query = db.query(User).filter(
+        User.manager_id == manager.id
     )
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(User.username).offset(offset).limit(page_size).all()
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
+
 
 
 def update_role(

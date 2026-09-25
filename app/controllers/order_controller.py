@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.schemas.order import OrderCreate, OrderStatus
 from app.services import order_service
+from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 
 
 def create_order(
@@ -26,8 +27,17 @@ def get_order(
     )
 
 
-def list_orders(db: Session):
-    return order_service.list_orders(db)
+def list_orders(
+    db: Session,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
+):
+    return order_service.list_orders(
+        db=db,
+        page=page,
+        page_size=page_size,
+    )
+
 
 
 def update_order_status(

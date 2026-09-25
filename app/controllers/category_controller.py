@@ -8,6 +8,7 @@ from app.schemas.category import (
 
 from app.services import category_service
 
+from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 from app.utils.exceptions import (
     ConflictException,
     NotFoundException,
@@ -33,12 +34,17 @@ def create_category(
 
 def get_categories(
     db: Session,
-    covered_ids: list | None = None
+    covered_ids: list | None = None,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
 ):
     return category_service.get_categories(
         db,
-        covered_ids=covered_ids
+        covered_ids=covered_ids,
+        page=page,
+        page_size=page_size,
     )
+
 
 
 def get_category(

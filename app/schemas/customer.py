@@ -28,3 +28,11 @@ class CustomerResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CustomerListResponse(BaseModel):
+    items: list[CustomerResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

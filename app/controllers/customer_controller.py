@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.schemas.customer import CustomerCreate, CustomerUpdate
 from app.services import customer_service
+from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 
 
 def create_customer(
@@ -25,8 +26,17 @@ def get_customer(
     return customer
 
 
-def list_customers(db: Session):
-    return customer_service.list_customers(db)
+def list_customers(
+    db: Session,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
+):
+    return customer_service.list_customers(
+        db=db,
+        page=page,
+        page_size=page_size,
+    )
+
 
 
 def update_customer(

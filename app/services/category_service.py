@@ -4,6 +4,7 @@ from app.models.category import Category
 from app.schemas.category import (
     CategoryCreate,
     CategoryUpdate,)
+from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 from app.utils.exceptions import (
     ConflictException,
     NotFoundException,)
@@ -32,7 +33,10 @@ def create_category(
 
 def get_categories(
     db: Session,
-    covered_ids: list | None = None):
+    covered_ids: list | None = None,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
+):
     query = (
         db.query(Category)
         .filter(Category.is_deleted.is_(False))
@@ -42,7 +46,18 @@ def get_categories(
         query = query.filter(
             Category.id.in_(covered_ids))
 
-    return query.all()
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = query.order_by(Category.name.asc()).offset(offset).limit(page_size).all()
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 def get_category(

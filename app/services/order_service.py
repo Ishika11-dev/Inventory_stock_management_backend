@@ -8,6 +8,7 @@ from app.models.order import Order
 from app.models.order_item import OrderItem
 from app.models.product import Product
 from app.schemas.order import OrderCreate, OrderStatus
+from app.utils.constraints import DEFAULT_PAGE, DEFAULT_PAGE_SIZE
 
 
 def create_order(
@@ -159,10 +160,19 @@ def get_order(
     return order
 
 
-def list_orders(db: Session):
+def list_orders(
+    db: Session,
+    page: int = DEFAULT_PAGE,
+    page_size: int = DEFAULT_PAGE_SIZE,
+):
+    query = db.query(Order)
+    total = query.count()
+    offset = (page - 1) * page_size
     orders = (
-        db.query(Order)
+        query
         .order_by(Order.order_date.desc())
+        .offset(offset)
+        .limit(page_size)
         .all()
     )
 
@@ -173,7 +183,15 @@ def list_orders(db: Session):
             .all()
         )
 
-    return orders
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+
+    return {
+        "items": orders,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 def update_order_status(
