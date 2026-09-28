@@ -62,6 +62,11 @@ def predict_by_order_id(db: Session, order_id: uuid.UUID):
     if not order:
         raise NotFoundException(f"Order with ID {order_id} not found")
 
+    if order.status in ["DELIVERED", "CANCELLED"]:
+        raise BadRequestException(
+            f"Cannot predict delivery for order #{str(order_id)[:8]} because its status is already '{order.status}'."
+        )
+
     items = db.query(OrderItem).filter(OrderItem.order_id == order_id).all()
     if not items:
         raise BadRequestException(f"Order {order_id} has no line items to predict delivery for")
