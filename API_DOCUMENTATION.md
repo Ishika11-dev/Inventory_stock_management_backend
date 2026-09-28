@@ -317,10 +317,11 @@ Cookie: refresh_token=<refresh_token>
 #### 2.2 List Managed Team Members (Paginated)
 - **Method**: `GET`
 - **Path**: `/users/team?page=1&page_size=10`
-- **Auth Required**: Bearer Token (`INVENTORY_MANAGER` or `ORDER_MANAGER`)
+- **Auth Required**: Bearer Token (`INVENTORY_MANAGER`, `ORDER_MANAGER`, or `SUPER_ADMIN`)
 - **Query Parameters**:
   - `page` (int, default: 1, ge: 1)
   - `page_size` (int, default: 10, ge: 1, le: 100)
+- **Description**: Returns staff members already directly assigned to this manager, plus unassigned staff members eligible for this manager's department (e.g. `INVENTORY_STAFF` for `INVENTORY_MANAGER`, and `ORDER_STAFF` for `ORDER_MANAGER`).
 - **Response (`200 OK`)**:
 ```json
 {

@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_, and_
 from sqlalchemy.orm import Session
 
 from app.models.user import User
@@ -39,22 +39,31 @@ def get_team(
     page_size: int = DEFAULT_PAGE_SIZE,
 ):
     """
-    Return only the staff members who are directly
-    assigned to this manager.
+    Return staff members who are directly assigned to this manager,
+    or available unassigned staff eligible for this manager's department.
     """
-
-    # Only managers can view a team.
-    if manager.role not in {
+    if manager.role == UserRole.SUPER_ADMIN.value:
+        query = db.query(User).filter(User.role != UserRole.SUPER_ADMIN.value)
+    elif manager.role in {
         UserRole.INVENTORY_MANAGER.value,
         UserRole.ORDER_MANAGER.value,
     }:
+        staff_role = (
+            UserRole.INVENTORY_STAFF.value
+            if manager.role == UserRole.INVENTORY_MANAGER.value
+            else UserRole.ORDER_STAFF.value
+        )
+        query = db.query(User).filter(
+            or_(
+                User.manager_id == manager.id,
+                and_(User.role == staff_role, User.manager_id.is_(None))
+            )
+        )
+    else:
         raise ForbiddenException(
             "No team for this role"
         )
 
-    query = db.query(User).filter(
-        User.manager_id == manager.id
-    )
     total = query.count()
     offset = (page - 1) * page_size
     items = query.order_by(User.username).offset(offset).limit(page_size).all()
