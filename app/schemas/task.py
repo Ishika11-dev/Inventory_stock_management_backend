@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 import uuid
 
 
@@ -65,6 +65,16 @@ class TaskCreate(BaseModel):
 
     target_id: uuid.UUID | None = None
 
+    @field_validator("due_date")
+    @classmethod
+    def validate_due_date_future(cls, v: datetime | None) -> datetime | None:
+        if v is not None:
+            now = datetime.now(timezone.utc)
+            v_utc = v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+            if v_utc < now:
+                raise ValueError("Task due_date cannot be in the past")
+        return v
+
     @model_validator(mode="after")
     def validate_target(self):
         _, _ = normalize_target(
@@ -96,6 +106,16 @@ class TaskUpdate(BaseModel):
     target_type: TargetType | None = None
 
     target_id: uuid.UUID | None = None
+
+    @field_validator("due_date")
+    @classmethod
+    def validate_due_date_future(cls, v: datetime | None) -> datetime | None:
+        if v is not None:
+            now = datetime.now(timezone.utc)
+            v_utc = v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+            if v_utc < now:
+                raise ValueError("Task due_date cannot be in the past")
+        return v
 
 
 class TaskStatusUpdate(BaseModel):

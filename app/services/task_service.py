@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -266,6 +267,12 @@ def create_task(
             "can create tasks"
         )
 
+    if data.due_date is not None:
+        now = datetime.now(timezone.utc)
+        due_utc = data.due_date if data.due_date.tzinfo else data.due_date.replace(tzinfo=timezone.utc)
+        if due_utc < now:
+            raise BadRequestException("Task due_date cannot be in the past")
+
     assignee = _validate_assignee(
         db,
         current_user,
@@ -457,6 +464,12 @@ def update_task(
         raise ForbiddenException(
             "Access denied"
         )
+
+    if data.due_date is not None:
+        now = datetime.now(timezone.utc)
+        due_utc = data.due_date if data.due_date.tzinfo else data.due_date.replace(tzinfo=timezone.utc)
+        if due_utc < now:
+            raise BadRequestException("Task due_date cannot be in the past")
 
     update_data = data.model_dump(
         exclude_unset=True

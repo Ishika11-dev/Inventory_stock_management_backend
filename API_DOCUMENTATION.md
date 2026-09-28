@@ -854,12 +854,13 @@ Cookie: refresh_token=<refresh_token>
   "title": "Audit Laptop Inventory & Reorder",
   "description": "Verify physical count of Galaxy laptops and update the database accordingly.",
   "priority": "HIGH",
-  "due_date": "2026-09-26T18:00:00Z",
+  "due_date": "2026-10-05T18:00:00Z",
   "assigned_to_id": "f81f263a-76f8-44bf-a08c-be87f930fcd7",
   "target_type": "PRODUCT",
   "target_id": "733784bb-7a4b-45fa-a9c8-f23677d3a141"
 }
 ```
+*(Note: `due_date` is optional. If provided, it must be a future timestamp. Specifying a past timestamp will be rejected with `422 Unprocessable Entity` or `400 Bad Request`).*
 - **Response (`201 Created`)**:
 ```json
 {
