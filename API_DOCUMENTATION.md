@@ -828,13 +828,16 @@ Cookie: refresh_token=<refresh_token>
 #### 7.4 Update Order Status
 - **Method**: `PATCH`
 - **Path**: `/orders/{order_id}/status`
+- **Auth Required**: Bearer Token (`SUPER_ADMIN`, `ORDER_MANAGER`, or staff with assigned order task)
 - **Request Body**:
 ```json
 {
-  "status": "PROCESSING"
+  "status": "DELIVERED",
+  "actual_delivery_date": "2026-09-28T14:45:00Z"
 }
 ```
-- **Response (`200 OK`)**: Updated order object.
+*(Note: `actual_delivery_date` is optional. When transitioning status to `"DELIVERED"`, if omitted, the system automatically stamps `actual_delivery_date` with the current UTC timestamp `now(timezone.utc)`).*
+- **Response (`200 OK`)**: Updated order object with populated `actual_delivery_date`.
 - **Enforced Transitions**: Attempting invalid state transitions (e.g. `ORDER_PLACED` directly to `DELIVERED`) throws `400 Bad Request`.
 
 ---

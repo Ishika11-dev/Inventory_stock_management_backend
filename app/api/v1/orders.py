@@ -89,5 +89,6 @@ def update_order_status(
     return order_controller.update_order_status(
         db=db,
         order_id=order_id,
-        status=data.status
+        status=data.status,
+        actual_delivery_date=data.actual_delivery_date
     )

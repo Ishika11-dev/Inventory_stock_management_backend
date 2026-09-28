@@ -70,6 +70,7 @@ class OrderResponse(BaseModel):
 
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
+    actual_delivery_date: datetime | None = None
 
 
 class OrderListResponse(BaseModel):

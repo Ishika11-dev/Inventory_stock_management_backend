@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -238,7 +239,8 @@ def list_orders(
 def update_order_status(
     db: Session,
     order_id: uuid.UUID,
-    new_status: OrderStatus
+    new_status: OrderStatus,
+    actual_delivery_date: datetime | None = None
 ):
     order = (
         db.query(Order)
@@ -317,6 +319,9 @@ def update_order_status(
         )
 
     order.status = new_status.value
+
+    if new_status == OrderStatus.DELIVERED:
+        order.actual_delivery_date = actual_delivery_date or datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(order)
