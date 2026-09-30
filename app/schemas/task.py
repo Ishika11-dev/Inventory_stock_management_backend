@@ -21,6 +21,8 @@ class TargetType(str, Enum):
     PRODUCT = "PRODUCT"
     CATEGORY = "CATEGORY"
     SUPPLIER = "SUPPLIER"
+    CUSTOMER = "CUSTOMER"
+    ORDER = "ORDER"
     NONE = "NONE"
 
 

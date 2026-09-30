@@ -4,7 +4,10 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import (
+    ensure_create_access,
+    get_current_user,
+)
 from app.models.user import User
 from app.controllers import order_controller
 from app.schemas.order import (
@@ -13,6 +16,7 @@ from app.schemas.order import (
     OrderResponse,
     OrderStatusUpdate,
 )
+from app.schemas.task import TargetType
 from app.utils.constraints import (
     DEFAULT_PAGE,
     DEFAULT_PAGE_SIZE,
@@ -23,6 +27,8 @@ router = APIRouter(
     prefix="/orders",
     tags=["Orders"]
 )
+
+ORDER_TYPE = TargetType.ORDER.value
 
 
 @router.post(
@@ -35,6 +41,10 @@ def create_order(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    ensure_create_access(
+        db, current_user, ORDER_TYPE
+    )
+
     return order_controller.create_order(
         db=db,
         data=data,

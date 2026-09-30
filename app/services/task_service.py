@@ -7,6 +7,8 @@ from app.models.user import User
 from app.models.product import Product
 from app.models.category import Category
 from app.models.supplier import Supplier
+from app.models.customer import Customer
+from app.models.order import Order
 
 from app.schemas.auth import UserRole
 from app.schemas.task import (
@@ -58,6 +60,22 @@ TARGET_MODEL = {
     TargetType.PRODUCT.value: Product,
     TargetType.CATEGORY.value: Category,
     TargetType.SUPPLIER.value: Supplier,
+    TargetType.CUSTOMER.value: Customer,
+    TargetType.ORDER.value: Order,
+}
+
+MANAGER_ALLOWED_TARGETS = {
+    UserRole.INVENTORY_MANAGER.value: {
+        TargetType.NONE.value,
+        TargetType.PRODUCT.value,
+        TargetType.CATEGORY.value,
+        TargetType.SUPPLIER.value,
+    },
+    UserRole.ORDER_MANAGER.value: {
+        TargetType.NONE.value,
+        TargetType.CUSTOMER.value,
+        TargetType.ORDER.value,
+    },
 }
 
 
@@ -285,6 +303,12 @@ def create_task(
             data.target_id
         )
     )
+
+    if current_user.role in MANAGER_ALLOWED_TARGETS:
+        if normalized_type not in MANAGER_ALLOWED_TARGETS[current_user.role]:
+            raise ForbiddenException(
+                f"{current_user.role} cannot assign tasks with target type {normalized_type}"
+            )
 
     _validate_target_exists(
         db,
@@ -522,6 +546,12 @@ def update_task(
                 new_target_id
             )
         )
+
+        if current_user.role in MANAGER_ALLOWED_TARGETS:
+            if normalized_type not in MANAGER_ALLOWED_TARGETS[current_user.role]:
+                raise ForbiddenException(
+                    f"{current_user.role} cannot assign tasks with target type {normalized_type}"
+                )
 
         _validate_target_exists(
             db,

@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import (
+    ensure_create_access,
+    ensure_record_access,
+    get_current_user,
+)
 from app.models.user import User
 from app.controllers import customer_controller
 from app.schemas.customer import (
@@ -13,6 +17,7 @@ from app.schemas.customer import (
     CustomerResponse,
     CustomerUpdate,
 )
+from app.schemas.task import TargetType
 from app.utils.constraints import (
     DEFAULT_PAGE,
     DEFAULT_PAGE_SIZE,
@@ -23,6 +28,8 @@ router = APIRouter(
     prefix="/customers",
     tags=["Customers"]
 )
+
+CUSTOMER_TYPE = TargetType.CUSTOMER.value
 
 
 @router.post(
@@ -35,6 +42,10 @@ def create_customer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    ensure_create_access(
+        db, current_user, CUSTOMER_TYPE
+    )
+
     return customer_controller.create_customer(
         db=db,
         data=data
@@ -84,6 +95,10 @@ def update_customer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    ensure_record_access(
+        db, current_user, CUSTOMER_TYPE, customer_id
+    )
+
     return customer_controller.update_customer(
         db=db,
         customer_id=customer_id,
