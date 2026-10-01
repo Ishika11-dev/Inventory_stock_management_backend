@@ -67,7 +67,7 @@ PostgreSQL Database                -> Relational storage with UUID primary keys 
 | **Order** | `orders` | `id`, `customer_id`, `order_date`, `status`, `total_amount`, `predicted_delivery_date`, `actual_delivery_date` | FK to `customers`. Cascades to `order_items` and `order_tracking`. |
 | **OrderItem** | `order_items` | `id`, `order_id`, `product_id`, `quantity`, `unit_price`, `subtotal` | FK to `orders` and `products`. |
 | **OrderTracking**| `order_tracking` | `id`, `order_id`, `status`, `timestamp`, `notes` | Audit trail of order status transitions. |
-| **Task** | `tasks` | `id`, `title`, `description`, `priority`, `status`, `due_date`, `assigned_to_id`, `assigned_by_id`, `target_type`, `target_id` | FK to `users` for creator & assignee. Polymorphic link to `PRODUCT`, `CATEGORY`, `SUPPLIER`. |
+| **Task** | `tasks` | `id`, `title`, `description`, `priority`, `status`, `due_date`, `assigned_to_id`, `assigned_by_id`, `target_type`, `target_id` | FK to `users` for creator & assignee. Polymorphic link to `PRODUCT`, `CATEGORY`, `SUPPLIER`, `CUSTOMER`, `ORDER`, or `NONE`. |
 | **PurchaseOrder**| `purchase_orders` | `id`, `supplier_id`, `status`, `order_date`, `expected_date`, `received_date` | B2B supplier procurement tracking. |
 | **StockMovement**| `stock_movements` | `id`, `product_id`, `quantity`, `movement_type`, `reference_id` | Audit log of inventory adjustments. |
 
@@ -77,27 +77,28 @@ PostgreSQL Database                -> Relational storage with UUID primary keys 
 
 ### 1. User Roles
 The application defines 5 distinct user roles:
-1. `SUPER_ADMIN`: Root privileges. Can view/manage all users, roles, tasks, categories, suppliers, and products.
-2. `INVENTORY_MANAGER`: Manages inventory staff, creates inventory tasks, and has unrestricted write access to products, categories, and suppliers.
-3. `ORDER_MANAGER`: Manages order staff, creates order tasks, and tracks customer orders.
-4. `INVENTORY_STAFF`: Field operator. Can only create or edit products, categories, and suppliers if assigned an active task for that item.
-5. `ORDER_STAFF`: Handles fulfillment tasks assigned by the order manager.
+1. `SUPER_ADMIN`: Root privileges. Can view/manage all users, roles, tasks, categories, suppliers, products, customers, and orders across the organization.
+2. `INVENTORY_MANAGER`: Oversees warehouse inventory. Manages inventory staff, creates inventory-scoped tasks (`PRODUCT`, `CATEGORY`, `SUPPLIER`), and has unrestricted write access to products, categories, and suppliers.
+3. `ORDER_MANAGER`: Oversees sales fulfillment and customer relations. Manages order staff, creates order-scoped tasks (`CUSTOMER`, `ORDER`), and has unrestricted write access to customers and orders.
+4. `INVENTORY_STAFF`: Warehouse floor operator. Can only create or edit products, categories, and suppliers if assigned an active task for that item/scope.
+5. `ORDER_STAFF`: Order fulfillment operator. Can only create or edit customers and create orders if assigned an active task for that item/scope.
 
 ### 2. Safeguards & Access Control Rules
 - **Bootstrap Rule**: The first user ever registered automatically receives the `SUPER_ADMIN` role. All subsequent registrations default to `INVENTORY_STAFF`.
 - **Last Super Admin Protection**: The system prevents demoting or deleting the last active `SUPER_ADMIN`.
-- **Staff-Manager Relationship**:
-  - `INVENTORY_MANAGER` can only assign tasks to `INVENTORY_STAFF`.
-  - `ORDER_MANAGER` can only assign tasks to `ORDER_STAFF`.
+- **Manager-Staff Hierarchy & Domain Separation**:
+  - `INVENTORY_MANAGER` can assign tasks **only** to `INVENTORY_STAFF` with scopes `NONE`, `PRODUCT`, `CATEGORY`, or `SUPPLIER`.
+  - `ORDER_MANAGER` can assign tasks **only** to `ORDER_STAFF` with scopes `NONE`, `CUSTOMER`, or `ORDER`.
+  - `SUPER_ADMIN` can assign tasks to any staff member with any scope.
   - Once a staff member is assigned to a manager, other managers cannot reassign or hijack that staff member.
 - **Attribute-Based Access Control (Task-Gated Mutations)**:
   - **Read Access**: All authenticated users can view/list products, categories, suppliers, orders, and customer records.
   - **Write Access (Create)**:
-    - Super admins & managers: Allowed unconditionally.
-    - Staff members: Must have an active (`status != 'COMPLETED'`) task matching `target_type` (e.g. `PRODUCT`).
+    - Super admins & managers: Allowed unconditionally within their respective domain.
+    - Staff members: Must hold an active (`status != 'COMPLETED'`) task matching `target_type` (e.g. `PRODUCT`, `CATEGORY`, `SUPPLIER`, `CUSTOMER`, or `ORDER`).
   - **Write Access (Update / Delete / Stock Adjust)**:
-    - Super admins & managers: Allowed unconditionally.
-    - Staff members: Must have an active task where `target_type == entity` AND `target_id == record.id`.
+    - Super admins & managers: Allowed unconditionally within their respective domain.
+    - Staff members: Must hold an active task where `target_type == entity` AND `target_id == record.id` (or a type-level task if record-specific target was not bounded).
 
 ---
 
@@ -172,21 +173,41 @@ When a customer order is placed, the backend calculates totals and dynamically e
 ### 4. Manager-Staff Task Delegation & ABAC Flow
 1. Manager creates a task via `POST /api/v1/tasks/` specifying:
    - Title, description, priority (`LOW`, `MEDIUM`, `HIGH`), due date.
-   - Assigned staff (`assigned_to_id`).
-   - Scope: `target_type` (`PRODUCT`, `CATEGORY`, `SUPPLIER`, or `NONE`) and optional `target_id`.
+   - Assigned staff member (`assigned_to_id`).
+   - Domain-specific Scope:
+     - `INVENTORY_MANAGER`: `PRODUCT`, `CATEGORY`, `SUPPLIER`, or `NONE`.
+     - `ORDER_MANAGER`: `CUSTOMER`, `ORDER`, or `NONE`.
+     - Optional `target_id` (UUID of existing entity, or `null` for type-level create permissions).
 2. The staff member logs in and queries `GET /api/v1/tasks/my` to retrieve assigned duties.
-3. The staff member performs the operation (e.g., updating a product). The FastAPI dependency `ensure_record_access` validates that the staff member holds an active task targeting that specific product ID.
+3. The staff member navigates directly to the target feature. The FastAPI dependencies (`ensure_create_access` / `ensure_record_access`) validate that the staff member holds an active task targeting that resource.
 4. Once finished, the staff member updates the task status to `COMPLETED` via `PATCH /api/v1/tasks/{id}/status`.
-5. Write access for that record automatically revokes.
+5. Write access for that record or scope is immediately and automatically revoked.
 
 ### 5. Machine Learning Delivery Prediction Flow
-1. An order is created or assessed for fulfillment.
-2. The backend calls `POST /api/v1/predictions/delivery` supplying:
-   - `order_quantity`, `number_of_items`, `current_stock`, `reorder_level`
-   - `supplier_lead_time`, `processing_time`, `shipping_time`
-3. The feature engineer computes `shortage_quantity = max(order_quantity - current_stock, 0)`.
-4. The trained XGBoost model (`app/ml/models/delivery_model.pkl`) evaluates non-linear interactions to forecast total fulfillment days.
-5. The predicted delivery timestamp is calculated: `order_date + timedelta(days=predicted_days)`.
+The system utilizes a trained **XGBoost Regressor (`xgboost-v2`)** to forecast exact order fulfillment turnaround in days and compute the estimated delivery date (`order_date + predicted_fulfillment_days`).
+
+#### The 9 Prediction Parameters & Real-Time Extraction Rules
+
+When an order delivery prediction is requested (`POST /api/v1/predictions/orders/{order_id}` or `POST /api/v1/predictions/delivery`), the following 9 parameters are determined:
+
+| # | Parameter | Source / Category | How It Is Evaluated / Business Logic |
+|---|---|---|---|
+| **1** | `order_date` | Order Record | The exact datetime when the order was submitted (`order.order_date`). Baseline for ETA calculation. |
+| **2** | `order_quantity` | Order Items | Total units across all line items: $\sum \text{item.quantity}$. Higher volume increases picking/handling time. |
+| **3** | `number_of_items` | Order Items | Distinct line items in order: $\text{count}(\text{items})$. Multiple distinct SKUs require multiple warehouse picking bins. |
+| **4** | `current_stock` | Inventory Database | Sum of on-hand warehouse stock for all products in the order: $\sum \text{product.quantity\_in\_stock}$. |
+| **5** | `reorder_level` | Inventory Database | Safety stock threshold: $\max(\text{product.reorder\_level})$. When inventory is below this level, replenishment is prioritized. |
+| **6** | `shortage_quantity` | Calculated Feature | Inventory deficit: $\max(\text{order\_quantity} - \text{current\_stock}, 0)$. If stock is sufficient, this is `0`. |
+| **7** | `supplier_lead_time` | Warehouse / Supplier Rule | Evaluated dynamically based on real-time warehouse inventory:<br>• **4 days** if shortage exists (`current_stock < order_quantity`), because emergency stock must be procured from the supplier.<br>• **2 days** if in stock (`current_stock >= order_quantity`), reflecting standard vendor turnaround buffer. |
+| **8** | `processing_time` | Warehouse Operations | Standard warehouse picking, packing, quality inspection, barcoding, and invoice labeling: **1 day**. |
+| **9** | `shipping_time` | Courier / Logistics | Dispatch handoff, carrier hub transit, route logistics, and final delivery to customer address: **3 days**. |
+
+#### Prediction Workflow:
+1. When calling `POST /api/v1/predictions/orders/{order_id}`, the backend queries line items and joins product stock.
+2. Checks order state: cannot predict for orders already `DELIVERED` or `CANCELLED`.
+3. Derives the 9 parameters automatically using the rules above.
+4. Passes the feature vector through the XGBoost model pipeline (`app/ml/predict.py`).
+5. Updates `orders.predicted_delivery_date` in PostgreSQL automatically and returns the payload to the frontend.
 
 ---
 
@@ -670,7 +691,9 @@ Cookie: refresh_token=<refresh_token>
 #### 6.1 Create Customer
 - **Method**: `POST`
 - **Path**: `/customers/`
-- **Auth Required**: None (or authenticated per frontend flow)
+- **Auth Required**: Bearer Token
+  - Allowed: `SUPER_ADMIN`, `ORDER_MANAGER`.
+  - For `ORDER_STAFF`: Requires an active task (`status != 'COMPLETED'`) with `target_type == 'CUSTOMER'`.
 - **Request Body**:
 ```json
 {
@@ -696,6 +719,7 @@ Cookie: refresh_token=<refresh_token>
 #### 6.2 List Customers (Paginated)
 - **Method**: `GET`
 - **Path**: `/customers/?page=1&page_size=10`
+- **Auth Required**: Bearer Token (Any authenticated user)
 - **Query Parameters**:
   - `page` (int, default: 1, ge: 1)
   - `page_size` (int, default: 10, ge: 1, le: 100)
@@ -723,11 +747,15 @@ Cookie: refresh_token=<refresh_token>
 #### 6.3 Get Customer by ID
 - **Method**: `GET`
 - **Path**: `/customers/{customer_id}`
+- **Auth Required**: Bearer Token (Any authenticated user)
 - **Response (`200 OK`)**: Single customer details.
 
 #### 6.4 Update Customer
 - **Method**: `PUT`
 - **Path**: `/customers/{customer_id}`
+- **Auth Required**: Bearer Token
+  - Allowed: `SUPER_ADMIN`, `ORDER_MANAGER`.
+  - For `ORDER_STAFF`: Requires an active task targeting `CUSTOMER` with matching `target_id == customer_id` (or unbounded customer type-level task).
 - **Request Body**:
 ```json
 {
@@ -744,7 +772,9 @@ Cookie: refresh_token=<refresh_token>
 #### 7.1 Create Order
 - **Method**: `POST`
 - **Path**: `/orders/`
-- **Auth Required**: Open / Authenticated
+- **Auth Required**: Bearer Token
+  - Allowed: `SUPER_ADMIN`, `ORDER_MANAGER`.
+  - For `ORDER_STAFF`: Requires an active task (`status != 'COMPLETED'`) with `target_type == 'ORDER'`.
 - **Request Body**:
 ```json
 {
@@ -786,6 +816,7 @@ Cookie: refresh_token=<refresh_token>
 #### 7.2 List Orders (Paginated)
 - **Method**: `GET`
 - **Path**: `/orders/?page=1&page_size=10`
+- **Auth Required**: Bearer Token (Any authenticated user)
 - **Query Parameters**:
   - `page` (int, default: 1, ge: 1)
   - `page_size` (int, default: 10, ge: 1, le: 100)
@@ -824,7 +855,8 @@ Cookie: refresh_token=<refresh_token>
 #### 7.3 Get Order by ID
 - **Method**: `GET`
 - **Path**: `/orders/{order_id}`
-- **Response (`200 OK`)**: Single order details with items and subtotal breakdown.
+- **Auth Required**: Bearer Token (Any authenticated user)
+- **Response (`200 OK`)**: Single order details with items, subtotal breakdown, and predicted/actual delivery dates.
 
 #### 7.4 Update Order Status
 - **Method**: `PATCH`
@@ -849,6 +881,10 @@ Cookie: refresh_token=<refresh_token>
 - **Method**: `POST`
 - **Path**: `/tasks/`
 - **Auth Required**: Bearer Token (`SUPER_ADMIN`, `INVENTORY_MANAGER`, `ORDER_MANAGER`)
+- **Domain Scope Enforcement**:
+  - `INVENTORY_MANAGER`: Allowed `target_type` values are `NONE`, `PRODUCT`, `CATEGORY`, `SUPPLIER`. Can assign only to `INVENTORY_STAFF`.
+  - `ORDER_MANAGER`: Allowed `target_type` values are `NONE`, `CUSTOMER`, `ORDER`. Can assign only to `ORDER_STAFF`.
+  - `SUPER_ADMIN`: Can assign any scope (`NONE`, `PRODUCT`, `CATEGORY`, `SUPPLIER`, `CUSTOMER`, `ORDER`) to any staff member.
 - **Request Body**:
 ```json
 {
@@ -861,7 +897,10 @@ Cookie: refresh_token=<refresh_token>
   "target_id": "733784bb-7a4b-45fa-a9c8-f23677d3a141"
 }
 ```
-*(Note: `due_date` is optional. If provided, it must be a future timestamp. Specifying a past timestamp will be rejected with `422 Unprocessable Entity` or `400 Bad Request`).*
+*(Notes:
+- `target_type`: Enum string (`NONE`, `PRODUCT`, `CATEGORY`, `SUPPLIER`, `CUSTOMER`, `ORDER`).
+- `target_id`: Optional UUID. If omitted with a non-NONE `target_type`, it delegates general type-level creation permission to the staff member. If `target_type` is `NONE`, `target_id` must be `null`.
+- `due_date`: Optional ISO datetime. If provided, must be in the future).*
 - **Response (`201 Created`)**:
 ```json
 {
@@ -870,7 +909,7 @@ Cookie: refresh_token=<refresh_token>
   "description": "Verify physical count of Galaxy laptops and update the database accordingly.",
   "priority": "HIGH",
   "status": "PENDING",
-  "due_date": "2026-09-26T18:00:00Z",
+  "due_date": "2026-10-05T18:00:00Z",
   "assigned_to_id": "f81f263a-76f8-44bf-a08c-be87f930fcd7",
   "assigned_by_id": "c328e63a-9c64-4cab-a9a1-100d9e07c0b0",
   "target_type": "PRODUCT",
@@ -883,48 +922,23 @@ Cookie: refresh_token=<refresh_token>
 #### 8.2 List Tasks (Manager / Super Admin - Paginated)
 - **Method**: `GET`
 - **Path**: `/tasks/?page=1&page_size=10`
-- **Auth Required**: Bearer Token (`SUPER_ADMIN` sees all; managers see tasks they initiated).
+- **Auth Required**: Bearer Token (`SUPER_ADMIN` sees all tasks; managers see tasks they initiated).
 - **Query Parameters**:
   - `page` (int, default: 1, ge: 1)
   - `page_size` (int, default: 10, ge: 1, le: 100)
-- **Response (`200 OK`)**:
-```json
-{
-  "items": [
-    {
-      "id": "c1a2e3f4-5678-90ab-cdef-1234567890ab",
-      "title": "Audit Laptop Inventory & Reorder",
-      "priority": "HIGH",
-      "status": "PENDING",
-      "assigned_to_id": "f81f263a-76f8-44bf-a08c-be87f930fcd7",
-      "assigned_by_id": "c328e63a-9c64-4cab-a9a1-100d9e07c0b0",
-      "target_type": "PRODUCT",
-      "target_id": "733784bb-7a4b-45fa-a9c8-f23677d3a141",
-      "created_at": "2026-09-23T14:50:00Z",
-      "updated_at": "2026-09-23T14:50:00Z"
-    }
-  ],
-  "page": 1,
-  "page_size": 10,
-  "total": 1,
-  "total_pages": 1
-}
-```
+- **Response (`200 OK`)**: Paginated list of tasks.
 
 #### 8.3 Get Current User's Tasks (Paginated)
 - **Method**: `GET`
 - **Path**: `/tasks/my?page=1&page_size=10`
-- **Auth Required**: Bearer Token (Any authenticated role; returns tasks where `assigned_to_id == current_user.id`).
-- **Query Parameters**:
-  - `page` (int, default: 1, ge: 1)
-  - `page_size` (int, default: 10, ge: 1, le: 100)
-- **Response (`200 OK`)**: Same paginated structure as list tasks.
+- **Auth Required**: Bearer Token (Returns tasks where `assigned_to_id == current_user.id`).
+- **Response (`200 OK`)**: Paginated list of tasks assigned to the authenticated user.
 
 #### 8.4 Get Task Details
 - **Method**: `GET`
 - **Path**: `/tasks/{task_id}`
 - **Auth Required**: Bearer Token (Creator, Assignee, or Super Admin).
-- **Response (`200 OK`)**: Task details.
+- **Response (`200 OK`)**: Full task details.
 
 #### 8.5 Update Task Status (Staff / Assignee)
 - **Method**: `PATCH`
@@ -943,14 +957,6 @@ Cookie: refresh_token=<refresh_token>
 - **Method**: `PUT`
 - **Path**: `/tasks/{task_id}`
 - **Auth Required**: Bearer Token (Task Creator or Super Admin).
-- **Request Body**:
-```json
-{
-  "title": "Updated Title",
-  "priority": "MEDIUM",
-  "due_date": "2026-09-30T12:00:00Z"
-}
-```
 - **Response (`200 OK`)**: Updated task object.
 
 #### 8.7 Delete Task
@@ -963,13 +969,31 @@ Cookie: refresh_token=<refresh_token>
 
 ### 9. Delivery Prediction (`/api/v1/predictions`)
 
+#### Overview & The 9 Prediction Parameters
+The machine learning pipeline forecasts order fulfillment turnaround in days based on 9 core parameters:
+
+1. `order_date`: Placed timestamp (baseline).
+2. `order_quantity`: Total items ordered across line items ($\sum \text{quantity}$).
+3. `number_of_items`: Distinct SKU count ($\text{len}(\text{items})$).
+4. `current_stock`: Warehouse stock available on-hand ($\sum \text{quantity\_in\_stock}$).
+5. `reorder_level`: Safety buffer threshold ($\max(\text{reorder\_level})$).
+6. `shortage_quantity`: Deficit calculated as $\max(\text{order\_quantity} - \text{current\_stock}, 0)$.
+7. `supplier_lead_time`: Warehouse / Supplier rule:
+   - **4 days** if shortage (`current_stock < order_quantity`), as stock must be reordered from the supplier.
+   - **2 days** if in stock (`current_stock >= order_quantity`).
+8. `processing_time`: Standard warehouse picking, packing, QC, and invoice labeling: **1 day**.
+9. `shipping_time`: Courier dispatch, transit, and customer delivery: **3 days**.
+
 #### 9.1 Predict Delivery by Order ID (Automated Database Feature Extraction)
 - **Method**: `POST`
 - **Path**: `/predictions/orders/{order_id}`
-- **Auth Required**: None / Public
-- **Description**: Automatically pulls the order, line item quantities, and real-time inventory stock from the database, feeds all 9 features into the XGBoost ML model, updates `order.predicted_delivery_date` in PostgreSQL, and returns the forecast.
+- **Auth Required**: None / Public (or Bearer Token)
+- **Description**: Pulls the order line items and current inventory stock from PostgreSQL, automatically evaluates all 9 parameters, runs inference on the XGBoost model, updates `order.predicted_delivery_date` in the database, and returns the result.
 - **Path Parameters**:
   - `order_id` (UUID, required): Target order identifier.
+- **Constraints**:
+  - Rejects orders with status `DELIVERED` or `CANCELLED` (`400 Bad Request`).
+  - Rejects orders without line items (`400 Bad Request`).
 - **Example Request**:
 ```http
 POST /api/v1/predictions/orders/f47ac10b-58cc-4372-a567-0e02b2c3d479
@@ -985,7 +1009,7 @@ POST /api/v1/predictions/orders/f47ac10b-58cc-4372-a567-0e02b2c3d479
 }
 ```
 
-#### 9.2 Predict Order Delivery Days (Manual Feature Inputs)
+#### 9.2 Predict Order Delivery Days (Manual Parameter Inputs)
 - **Method**: `POST`
 - **Path**: `/predictions/delivery`
 - **Auth Required**: None / Public
@@ -996,21 +1020,21 @@ POST /api/v1/predictions/orders/f47ac10b-58cc-4372-a567-0e02b2c3d479
   - `number_of_items` (int): Distinct items in order.
   - `current_stock` (int): Available inventory in warehouse.
   - `reorder_level` (int): Product threshold for restocking.
-  - `supplier_lead_time` (int, days): Supplier replenishment lead time.
-  - `processing_time` (int, days): Internal picking/packing duration.
-  - `shipping_time` (int, days): Carrier transit duration.
+  - `supplier_lead_time` (int, days): Supplier replenishment lead time (default: 4 if shortage else 2).
+  - `processing_time` (int, days): Internal picking/packing duration (default: 1).
+  - `shipping_time` (int, days): Carrier transit duration (default: 3).
 
 - **Example Request URL**:
 ```text
-POST /api/v1/predictions/delivery?order_id=f47ac10b-58cc-4372-a567-0e02b2c3d479&order_date=2026-09-23T10%3A00%3A00Z&order_quantity=50&number_of_items=3&current_stock=20&reorder_level=10&supplier_lead_time=5&processing_time=1&shipping_time=2
+POST /api/v1/predictions/delivery?order_id=f47ac10b-58cc-4372-a567-0e02b2c3d479&order_date=2026-09-23T10%3A00%3A00Z&order_quantity=50&number_of_items=3&current_stock=20&reorder_level=10&supplier_lead_time=4&processing_time=1&shipping_time=3
 ```
 
 - **Response (`200 OK`)**:
 ```json
 {
   "order_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-  "predicted_fulfillment_days": 7.42,
-  "predicted_delivery_date": "2026-09-30T20:04:48Z",
+  "predicted_fulfillment_days": 6.84,
+  "predicted_delivery_date": "2026-09-29T22:04:48Z",
   "model_version": "xgboost-v2",
   "training_data_type": "dummy_historical_csv"
 }
