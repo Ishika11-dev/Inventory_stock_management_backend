@@ -50,7 +50,7 @@ PostgreSQL Database                -> Relational storage with UUID primary keys 
 - **Identity & Keys**: All entity IDs use standard `UUIDv4`.
 - **Validation**: Strict typing and request/response serialisation with Pydantic v2.
 - **Security**: JWT dual-token mechanism (short-lived access tokens + HttpOnly cookie refresh tokens) with instant database token revocation (`RevokedToken`).
-- **Machine Learning**: Integrated XGBoost regressor (`xgboost-v2`) predicting order delivery fulfillment days based on stock, shortage, and supplier lead times.
+- **Machine Learning**: Integrated XGBoost regressor (`xgboost-v3`) predicting order delivery fulfillment days based on warehouse stock, shortage deficit, transit distance, shipping mode, and Open-Meteo 5-day transit window weather.
 
 ---
 
@@ -184,30 +184,34 @@ When a customer order is placed, the backend calculates totals and dynamically e
 5. Write access for that record or scope is immediately and automatically revoked.
 
 ### 5. Machine Learning Delivery Prediction Flow
-The system utilizes a trained **XGBoost Regressor (`xgboost-v2`)** to forecast exact order fulfillment turnaround in days and compute the estimated delivery date (`order_date + predicted_fulfillment_days`).
+The system utilizes a trained **XGBoost Regressor (`xgboost-v3`)** to forecast exact order fulfillment turnaround in days and compute the estimated delivery date (`order_date + predicted_fulfillment_days`). It integrates real-time inventory stock levels, transit distance from Central Warehouse Hub, shipping tier, and an automated **5-day transit window weather forecast** from Open-Meteo (zero API keys required).
 
-#### The 9 Prediction Parameters & Real-Time Extraction Rules
+#### The 10 Prediction Parameters & Real-Time Extraction Rules
 
-When an order delivery prediction is requested (`POST /api/v1/predictions/orders/{order_id}` or `POST /api/v1/predictions/delivery`), the following 9 parameters are determined:
+When an order delivery prediction is requested (`POST /api/v1/predictions/orders/{order_id}` or `POST /api/v1/predictions/delivery`), the following 10 parameters are determined:
 
 | # | Parameter | Source / Category | How It Is Evaluated / Business Logic |
 |---|---|---|---|
-| **1** | `order_date` | Order Record | The exact datetime when the order was submitted (`order.order_date`). Baseline for ETA calculation. |
+| **1** | `order_date` | Order Record | Placed timestamp (`order.order_date`). Baseline for ETA calculation. |
 | **2** | `order_quantity` | Order Items | Total units across all line items: $\sum \text{item.quantity}$. Higher volume increases picking/handling time. |
-| **3** | `number_of_items` | Order Items | Distinct line items in order: $\text{count}(\text{items})$. Multiple distinct SKUs require multiple warehouse picking bins. |
+| **3** | `number_of_items` | Order Items | Distinct line items in order: $\text{count}(\text{items})$. Multiple distinct SKUs require multiple picking bins. |
 | **4** | `current_stock` | Inventory Database | Sum of on-hand warehouse stock for all products in the order: $\sum \text{product.quantity\_in\_stock}$. |
-| **5** | `reorder_level` | Inventory Database | Safety stock threshold: $\max(\text{product.reorder\_level})$. When inventory is below this level, replenishment is prioritized. |
+| **5** | `reorder_level` | Inventory Database | Safety stock threshold: $\max(\text{product.reorder\_level})$. |
 | **6** | `shortage_quantity` | Calculated Feature | Inventory deficit: $\max(\text{order\_quantity} - \text{current\_stock}, 0)$. If stock is sufficient, this is `0`. |
-| **7** | `supplier_lead_time` | Warehouse / Supplier Rule | Evaluated dynamically based on real-time warehouse inventory:<br>• **4 days** if shortage exists (`current_stock < order_quantity`), because emergency stock must be procured from the supplier.<br>• **2 days** if in stock (`current_stock >= order_quantity`), reflecting standard vendor turnaround buffer. |
-| **8** | `processing_time` | Warehouse Operations | Standard warehouse picking, packing, quality inspection, barcoding, and invoice labeling: **1 day**. |
-| **9** | `shipping_time` | Courier / Logistics | Dispatch handoff, carrier hub transit, route logistics, and final delivery to customer address: **3 days**. |
+| **7** | `distance_km` | Geospatial Logistics | Road transit distance between Central Warehouse Hub and Customer delivery city (e.g. Local $\approx 45$ km, Regional $\approx 350$ km, Interstate $\approx 1200+$ km). |
+| **8** | `shipping_mode` | Logistics Tier | Binary shipping speed: `0` for Standard (~350 km/day), `1` for Express (~600 km/day). |
+| **9** | `rainy_days_in_transit` | Open-Meteo API | Adverse/rainy days detected in the 5-day shipment transit window starting from `order_date`. Adds realistic transit buffer (+0.55 days/rainy day). |
+| **10**| `supplier_lead_time` | Warehouse / Supplier Rule | Replenishment buffer if deficit exists:<br>• **4.0 days** if shortage (`current_stock < order_quantity`).<br>• **1.5 days** if in stock (`current_stock >= order_quantity`). |
+| **11**| `processing_time` | Warehouse Operations | Standard picking, packing, QC inspection, and invoice labeling: **1.0 day**. |
 
 #### Prediction Workflow:
 1. When calling `POST /api/v1/predictions/orders/{order_id}`, the backend queries line items and joins product stock.
-2. Checks order state: cannot predict for orders already `DELIVERED` or `CANCELLED`.
-3. Derives the 9 parameters automatically using the rules above.
-4. Passes the feature vector through the XGBoost model pipeline (`app/ml/predict.py`).
-5. Updates `orders.predicted_delivery_date` in PostgreSQL automatically and returns the payload to the frontend.
+2. Checks order state: rejects orders already `DELIVERED` or `CANCELLED`.
+3. Resolves customer destination city to compute `distance_km`.
+4. Calls Open-Meteo for a 5-day transit window weather query to detect rain/storm risks without any API keys.
+5. Derives the 10 parameters automatically using the rules above.
+6. Passes the feature vector through the XGBoost model pipeline (`app/ml/predict.py`).
+7. Updates `orders.predicted_delivery_date` in PostgreSQL automatically and returns the payload with a human-readable logistics explanation to the frontend.
 
 ---
 
@@ -969,8 +973,8 @@ Cookie: refresh_token=<refresh_token>
 
 ### 9. Delivery Prediction (`/api/v1/predictions`)
 
-#### Overview & The 9 Prediction Parameters
-The machine learning pipeline forecasts order fulfillment turnaround in days based on 9 core parameters:
+#### Overview & The 10 Prediction Parameters
+The machine learning pipeline forecasts order fulfillment turnaround in days based on 10 core logistics, inventory, and environmental parameters:
 
 1. `order_date`: Placed timestamp (baseline).
 2. `order_quantity`: Total items ordered across line items ($\sum \text{quantity}$).
@@ -978,17 +982,19 @@ The machine learning pipeline forecasts order fulfillment turnaround in days bas
 4. `current_stock`: Warehouse stock available on-hand ($\sum \text{quantity\_in\_stock}$).
 5. `reorder_level`: Safety buffer threshold ($\max(\text{reorder\_level})$).
 6. `shortage_quantity`: Deficit calculated as $\max(\text{order\_quantity} - \text{current\_stock}, 0)$.
-7. `supplier_lead_time`: Warehouse / Supplier rule:
-   - **4 days** if shortage (`current_stock < order_quantity`), as stock must be reordered from the supplier.
-   - **2 days** if in stock (`current_stock >= order_quantity`).
-8. `processing_time`: Standard warehouse picking, packing, QC, and invoice labeling: **1 day**.
-9. `shipping_time`: Courier dispatch, transit, and customer delivery: **3 days**.
+7. `distance_km`: Transit distance in km from Central Warehouse Hub to customer city.
+8. `shipping_mode`: `0` for Standard (~350 km/day), `1` for Express (~600 km/day).
+9. `rainy_days_in_transit`: Number of rainy/adverse weather days during the 5-day shipment transit window (auto-fetched from Open-Meteo).
+10. `supplier_lead_time`: Replenishment turnaround:
+    - **4.0 days** if shortage (`current_stock < order_quantity`).
+    - **1.5 days** if in stock (`current_stock >= order_quantity`).
+11. `processing_time`: Standard warehouse picking, packing, QC, and invoice labeling: **1.0 day**.
 
 #### 9.1 Predict Delivery by Order ID (Automated Database Feature Extraction)
 - **Method**: `POST`
 - **Path**: `/predictions/orders/{order_id}`
 - **Auth Required**: None / Public (or Bearer Token)
-- **Description**: Pulls the order line items and current inventory stock from PostgreSQL, automatically evaluates all 9 parameters, runs inference on the XGBoost model, updates `order.predicted_delivery_date` in the database, and returns the result.
+- **Description**: Pulls the order line items, customer address, and current inventory stock from PostgreSQL, automatically evaluates all parameters and Open-Meteo transit weather, runs inference on the XGBoost model, updates `order.predicted_delivery_date` in the database, and returns the result with a full logistics explanation.
 - **Path Parameters**:
   - `order_id` (UUID, required): Target order identifier.
 - **Constraints**:
@@ -1002,10 +1008,15 @@ POST /api/v1/predictions/orders/f47ac10b-58cc-4372-a567-0e02b2c3d479
 ```json
 {
   "order_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-  "predicted_fulfillment_days": 5.18,
-  "predicted_delivery_date": "2026-09-28T14:32:00Z",
-  "model_version": "xgboost-v2",
-  "training_data_type": "dummy_historical_csv"
+  "predicted_fulfillment_days": 4.62,
+  "predicted_delivery_date": "2026-10-06T14:32:00Z",
+  "model_version": "xgboost-v3",
+  "training_data_type": "historical_fulfillment_csv_with_weather_and_distance",
+  "weather_condition": "RAIN",
+  "rainy_days_in_transit": 2,
+  "distance_km": 550.0,
+  "shipping_mode": "STANDARD",
+  "logistics_explanation": "1.0d warehouse handling + 1.6d standard transit (550 km) + 1.0d transit weather buffer (2 rainy days)"
 }
 ```
 
@@ -1020,23 +1031,31 @@ POST /api/v1/predictions/orders/f47ac10b-58cc-4372-a567-0e02b2c3d479
   - `number_of_items` (int): Distinct items in order.
   - `current_stock` (int): Available inventory in warehouse.
   - `reorder_level` (int): Product threshold for restocking.
-  - `supplier_lead_time` (int, days): Supplier replenishment lead time (default: 4 if shortage else 2).
-  - `processing_time` (int, days): Internal picking/packing duration (default: 1).
-  - `shipping_time` (int, days): Carrier transit duration (default: 3).
+  - `distance_km` (float, optional, default: 350.0): Road distance in km.
+  - `shipping_mode` (int, optional, default: 0): `0` = Standard, `1` = Express.
+  - `rainy_days_in_transit` (int, optional, default: 0): Adverse weather days in transit window.
+  - `supplier_lead_time` (float, days, default: 2.0): Supplier replenishment lead time.
+  - `processing_time` (float, days, default: 1.0): Internal picking/packing duration.
+  - `shipping_time` (int, days, default: 3): Carrier transit duration.
 
 - **Example Request URL**:
 ```text
-POST /api/v1/predictions/delivery?order_id=f47ac10b-58cc-4372-a567-0e02b2c3d479&order_date=2026-09-23T10%3A00%3A00Z&order_quantity=50&number_of_items=3&current_stock=20&reorder_level=10&supplier_lead_time=4&processing_time=1&shipping_time=3
+POST /api/v1/predictions/delivery?order_id=f47ac10b-58cc-4372-a567-0e02b2c3d479&order_date=2026-10-01T10%3A00%3A00Z&order_quantity=50&number_of_items=3&current_stock=20&reorder_level=10&distance_km=850&shipping_mode=0&rainy_days_in_transit=2&supplier_lead_time=4.0&processing_time=1.0
 ```
 
 - **Response (`200 OK`)**:
 ```json
 {
   "order_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-  "predicted_fulfillment_days": 6.84,
-  "predicted_delivery_date": "2026-09-29T22:04:48Z",
-  "model_version": "xgboost-v2",
-  "training_data_type": "dummy_historical_csv"
+  "predicted_fulfillment_days": 8.49,
+  "predicted_delivery_date": "2026-10-10T02:38:43Z",
+  "model_version": "xgboost-v3",
+  "training_data_type": "historical_fulfillment_csv_with_weather_and_distance",
+  "weather_condition": "RAIN",
+  "rainy_days_in_transit": 2,
+  "distance_km": 850.0,
+  "shipping_mode": "STANDARD",
+  "logistics_explanation": "1.0d warehouse handling + 2.4d standard transit (850 km) + 1.0d transit weather buffer (2 rainy days) + 4.0d supplier replenishment deficit (30 units)"
 }
 ```
 

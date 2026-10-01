@@ -1,5 +1,4 @@
 from pathlib import Path
-
 import joblib
 import pandas as pd
 from sklearn.metrics import (
@@ -10,18 +9,13 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from xgboost import XGBRegressor
 
+from app.ml.synthetic_data import save_historical_dataset
 
-DATA_PATH = Path(
-    "app/ml/data/fulfillment_historical_data.csv"
-)
+DATA_PATH = Path("app/ml/data/fulfillment_historical_data.csv")
+MODEL_PATH = Path("app/ml/models/delivery_model.pkl")
 
-MODEL_PATH = Path(
-    "app/ml/models/delivery_model.pkl"
-)
-
-MODEL_VERSION = "xgboost-v2"
-
-TRAINING_DATA_TYPE = "dummy_historical_csv"
+MODEL_VERSION = "xgboost-v3"
+TRAINING_DATA_TYPE = "historical_fulfillment_csv_with_weather_and_distance"
 
 FEATURES = [
     "order_quantity",
@@ -29,226 +23,101 @@ FEATURES = [
     "current_stock",
     "reorder_level",
     "shortage_quantity",
+    "distance_km",
+    "shipping_mode",
+    "rainy_days_in_transit",
     "supplier_lead_time",
     "processing_time",
-    "shipping_time",
 ]
 
 TARGET = "fulfillment_days"
 
 
 def train_model():
+    print("=" * 60)
+    print("DELIVERY PREDICTION MODEL TRAINING (XGBOOST)")
+    print("=" * 60)
 
-    print("=" * 50)
-    print("DELIVERY PREDICTION MODEL TRAINING")
-    print("=" * 50)
-
-    # -----------------------------
-    # 1. Load dataset
-    # -----------------------------
-
-    print("\nLoading historical dataset...")
-
+    # 1. Ensure dataset exists and has updated schema
     if not DATA_PATH.exists():
-        raise FileNotFoundError(
-            f"Training dataset not found: {DATA_PATH}"
-        )
+        print("Dataset not found. Generating fresh historical dataset...")
+        save_historical_dataset(rows=5000)
 
     df = pd.read_csv(DATA_PATH)
 
-    print(
-        f"Dataset loaded successfully: "
-        f"{len(df)} rows"
-    )
-
-    # -----------------------------
-    # 2. Validate dataset
-    # -----------------------------
-
+    # If old columns exist, regenerate
     required_columns = FEATURES + [TARGET]
+    if any(col not in df.columns for col in required_columns):
+        print("Dataset schema outdated. Regenerating fresh historical dataset...")
+        save_historical_dataset(rows=5000)
+        df = pd.read_csv(DATA_PATH)
 
-    missing_columns = [
-        column
-        for column in required_columns
-        if column not in df.columns
-    ]
+    print(f"\nDataset loaded: {len(df)} rows across {len(FEATURES)} features")
 
-    if missing_columns:
-        raise ValueError(
-            f"Missing required columns: "
-            f"{missing_columns}"
-        )
-
-    if df[required_columns].isnull().any().any():
-        raise ValueError(
-            "Dataset contains missing values "
-            "in required columns."
-        )
-
-    # -----------------------------
-    # 3. Prepare features and target
-    # -----------------------------
-
+    # 2. Prepare Features & Target
     X = df[FEATURES]
-
     y = df[TARGET]
 
-    print(
-        f"\nFeatures: {len(FEATURES)}"
-    )
-
-    print(
-        f"Target: {TARGET}"
-    )
-
-    # -----------------------------
-    # 4. Train/test split
-    # -----------------------------
-
+    # 3. Train / Test Split
     X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.20,
-        random_state=42,
+        X, y, test_size=0.20, random_state=42
     )
+    print(f"Training samples: {len(X_train)} | Test samples: {len(X_test)}")
 
-    print(
-        f"\nTraining records: {len(X_train)}"
-    )
-
-    print(
-        f"Testing records: {len(X_test)}"
-    )
-
-    # -----------------------------
-    # 5. Create XGBoost model
-    # -----------------------------
-
-    print("\nTraining XGBoost model...")
-
+    # 4. Train XGBoost Regressor
+    print("\nFitting XGBRegressor...")
     model = XGBRegressor(
-        n_estimators=300,
-        max_depth=5,
-        learning_rate=0.05,
+        n_estimators=250,
+        max_depth=4,
+        learning_rate=0.06,
+        subsample=0.85,
+        colsample_bytree=0.85,
         objective="reg:squarederror",
         random_state=42,
     )
+    model.fit(X_train, y_train)
 
-    model.fit(
-        X_train,
-        y_train
-    )
+    # 5. Evaluate Performance
+    predictions = model.predict(X_test)
 
-    # -----------------------------
-    # 6. Predictions
-    # -----------------------------
+    mae = mean_absolute_error(y_test, predictions)
+    rmse = mean_squared_error(y_test, predictions) ** 0.5
+    r2 = r2_score(y_test, predictions)
 
-    predictions = model.predict(
-        X_test
-    )
+    abs_errors = abs(y_test.to_numpy() - predictions)
+    acc_1_day = (abs_errors <= 1.0).mean() * 100
+    acc_2_days = (abs_errors <= 2.0).mean() * 100
 
-    # -----------------------------
-    # 7. Model evaluation
-    # -----------------------------
+    print("\n" + "=" * 60)
+    print("MODEL EVALUATION RESULTS")
+    print("=" * 60)
+    print(f"Mean Absolute Error (MAE)  : {mae:.2f} days")
+    print(f"Root Mean Squared Error    : {rmse:.2f} days")
+    print(f"R² Score                   : {r2:.4f}")
+    print(f"Accuracy within ±1.0 day   : {acc_1_day:.2f}%")
+    print(f"Accuracy within ±2.0 days  : {acc_2_days:.2f}%")
 
-    mae = mean_absolute_error(
-        y_test,
-        predictions
-    )
-
-    rmse = mean_squared_error(
-        y_test,
-        predictions
-    ) ** 0.5
-
-    r2 = r2_score(
-        y_test,
-        predictions
-    )
-
-    absolute_errors = abs(
-        y_test.to_numpy() - predictions
-    )
-
-    accuracy_within_1_day = (
-        absolute_errors <= 1
-    ).mean() * 100
-
-    accuracy_within_2_days = (
-        absolute_errors <= 2
-    ).mean() * 100
-
-    # -----------------------------
-    # 8. Print evaluation
-    # -----------------------------
-
-    print("\n")
-    print("=" * 50)
-    print("MODEL EVALUATION")
-    print("=" * 50)
-
-    print(
-        f"Mean Absolute Error : "
-        f"{mae:.2f} days"
-    )
-
-    print(
-        f"Root Mean Squared Error : "
-        f"{rmse:.2f} days"
-    )
-
-    print(
-        f"R² Score : "
-        f"{r2:.4f}"
-    )
-
-    print(
-        f"Accuracy within ±1 day : "
-        f"{accuracy_within_1_day:.2f}%"
-    )
-
-    print(
-        f"Accuracy within ±2 days : "
-        f"{accuracy_within_2_days:.2f}%"
-    )
-
-    # -----------------------------
-    # 9. Save model
-    # -----------------------------
-
-    MODEL_PATH.parent.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
+    # 6. Save Model Bundle
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     model_data = {
         "model": model,
         "features": FEATURES,
         "model_version": MODEL_VERSION,
         "training_data_type": TRAINING_DATA_TYPE,
+        "metrics": {
+            "mae": round(mae, 2),
+            "rmse": round(rmse, 2),
+            "r2": round(r2, 4),
+            "acc_1_day": round(acc_1_day, 2),
+        }
     }
+    joblib.dump(model_data, MODEL_PATH)
 
-    joblib.dump(
-        model_data,
-        MODEL_PATH
-    )
-
-    print("\n")
-    print("=" * 50)
-    print("MODEL SAVED")
-    print("=" * 50)
-
-    print(
-        f"Model path: {MODEL_PATH}"
-    )
-
-    print(
-        f"Model version: {MODEL_VERSION}"
-    )
-
-    print(
-        f"Training data: {TRAINING_DATA_TYPE}"
-    )
+    print("\n" + "=" * 60)
+    print("MODEL ARTIFACT SAVED")
+    print("=" * 60)
+    print(f"Model path: {MODEL_PATH}")
+    print(f"Version   : {MODEL_VERSION}")
 
 
 if __name__ == "__main__":

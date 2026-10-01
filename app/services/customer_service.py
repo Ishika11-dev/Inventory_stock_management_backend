@@ -11,11 +11,18 @@ def create_customer(
     db: Session,
     data: CustomerCreate
 ):
+    # Ensure legacy address is synced with delivery or residential address
+    effective_address = data.delivery_address or data.residential_address or data.address
+    effective_delivery = data.delivery_address or data.address
+    effective_residential = data.residential_address or data.address
+
     customer = Customer(
         name=data.name,
         email=str(data.email).lower(),
         phone=data.phone,
-        address=data.address,
+        address=effective_address,
+        residential_address=effective_residential,
+        delivery_address=effective_delivery,
     )
 
     db.add(customer)
@@ -56,7 +63,6 @@ def list_customers(
     }
 
 
-
 def update_customer(
     db: Session,
     customer: Customer,
@@ -66,6 +72,13 @@ def update_customer(
 
     if "email" in values and values["email"]:
         values["email"] = str(values["email"]).lower()
+
+    # Sync address if delivery_address is updated
+    if "delivery_address" in values and values["delivery_address"]:
+        values["address"] = values["delivery_address"]
+    elif "address" in values and values["address"]:
+        if "delivery_address" not in values:
+            values["delivery_address"] = values["address"]
 
     for key, value in values.items():
         setattr(customer, key, value)

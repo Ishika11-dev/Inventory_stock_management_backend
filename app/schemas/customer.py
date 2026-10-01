@@ -9,6 +9,8 @@ class CustomerCreate(BaseModel):
     email: EmailStr
     phone: str | None = Field(default=None, max_length=20)
     address: str | None = Field(default=None, max_length=500)
+    residential_address: str | None = Field(default=None, max_length=500, description="Where the customer lives")
+    delivery_address: str | None = Field(default=None, max_length=500, description="Where the customer wants packages delivered")
 
 
 class CustomerUpdate(BaseModel):
@@ -16,14 +18,18 @@ class CustomerUpdate(BaseModel):
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=20)
     address: str | None = Field(default=None, max_length=500)
+    residential_address: str | None = Field(default=None, max_length=500)
+    delivery_address: str | None = Field(default=None, max_length=500)
 
 
 class CustomerResponse(BaseModel):
     id: uuid.UUID
     name: str
     email: EmailStr
-    phone: str | None
-    address: str | None
+    phone: str | None = None
+    address: str | None = None
+    residential_address: str | None = None
+    delivery_address: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -35,4 +41,4 @@ class CustomerListResponse(BaseModel):
     total: int
     page: int
     page_size: int
-    total_pages: int
+    total_pages: int

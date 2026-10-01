@@ -3,15 +3,16 @@ def build_delivery_features(
     number_of_items: int,
     current_stock: int,
     reorder_level: int,
-    supplier_lead_time: int,
-    processing_time: int,
-    shipping_time: int,
+    distance_km: float = 350.0,
+    shipping_mode: int = 0,
+    rainy_days_in_transit: int = 0,
+    supplier_lead_time: float = 2.0,
+    processing_time: float = 1.0,
 ) -> dict:
-
-    shortage_quantity = max(
-        order_quantity - current_stock,
-        0
-    )
+    """
+    Constructs the exact 10-parameter feature dictionary for XGBoost inference.
+    """
+    shortage_quantity = max(order_quantity - current_stock, 0)
 
     return {
         "order_quantity": order_quantity,
@@ -19,7 +20,9 @@ def build_delivery_features(
         "current_stock": current_stock,
         "reorder_level": reorder_level,
         "shortage_quantity": shortage_quantity,
-        "supplier_lead_time": supplier_lead_time,
-        "processing_time": processing_time,
-        "shipping_time": shipping_time,
+        "distance_km": float(distance_km),
+        "shipping_mode": int(shipping_mode),
+        "rainy_days_in_transit": int(rainy_days_in_transit),
+        "supplier_lead_time": float(supplier_lead_time),
+        "processing_time": float(processing_time),
     }

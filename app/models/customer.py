@@ -33,7 +33,20 @@ class Customer(Base):
         nullable=True
     )
 
+    # Legacy field preserved for backward compatibility
     address: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True
+    )
+
+    # Where the customer lives (Home / Billing address)
+    residential_address: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True
+    )
+
+    # Where the customer wants orders delivered (Shipping / Dispatch address)
+    delivery_address: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True
     )
