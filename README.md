@@ -31,9 +31,9 @@ Built with **Python 3.10+**, **FastAPI**, **PostgreSQL**, **SQLAlchemy 2.0**, **
     - `ORDER_MANAGER` assigns to `ORDER_STAFF` (Scopes: `NONE`, `CUSTOMER`, `ORDER`).
   - Staff task lifecycle (`PENDING` → `IN_PROGRESS` → `COMPLETED`).
 - **🤖 Machine Learning Delivery Prediction (XGBoost)**:
-  - Trained XGBoost Regressor model forecasting order fulfillment turnaround in days.
-  - Automated 9-feature extraction directly from real-time database orders and stock.
-  - Dynamic supplier lead time, warehouse handling, and courier logistics rules.
+  - Trained XGBoost Regressor model (`xgboost-v3`) forecasting order fulfillment turnaround in days.
+  - Automated 10-feature extraction directly from real-time database orders, customer delivery locations, and stock.
+  - Dynamic supplier lead time, warehouse handling, road transit distance, shipping tier, and Open-Meteo 5-day transit window weather forecasts.
   - Automatically writes `predicted_delivery_date` back to PostgreSQL.
 
 ---
@@ -57,9 +57,9 @@ Built with **Python 3.10+**, **FastAPI**, **PostgreSQL**, **SQLAlchemy 2.0**, **
 
 ---
 
-## 🧠 Machine Learning: 9-Parameter Delivery Prediction
+## 🧠 Machine Learning: 10-Parameter Delivery Prediction
 
-The ETA prediction engine evaluates 9 specific parameters to accurately forecast order fulfillment days:
+The ETA prediction engine evaluates 10 specific parameters to accurately forecast order fulfillment days:
 
 | # | Parameter | Source | Business Logic & Rules |
 |---|---|---|---|
@@ -69,9 +69,11 @@ The ETA prediction engine evaluates 9 specific parameters to accurately forecast
 | **4** | `current_stock` | Inventory DB | Available warehouse inventory across all ordered products. |
 | **5** | `reorder_level` | Inventory DB | Safety buffer threshold ($\max(\text{reorder\_level})$). |
 | **6** | `shortage_quantity` | Calculated | Deficit: $\max(\text{order\_quantity} - \text{current\_stock}, 0)$. |
-| **7** | `supplier_lead_time` | Warehouse / Supplier Rule | **4 days** if stock deficit exists (`current_stock < order_quantity`), as stock must be procured from the supplier.<br>**2 days** if in stock (`current_stock >= order_quantity`). |
-| **8** | `processing_time` | Warehouse Operations | Standard picking, packing, quality check, and invoice labeling: **1 day**. |
-| **9** | `shipping_time` | Courier / Logistics | Dispatch, carrier transit, and final delivery: **3 days**. |
+| **7** | `distance_km` | Geospatial Logistics | Transit distance between Central Warehouse Hub and customer delivery address. |
+| **8** | `shipping_mode` | Logistics Tier | `0` = Standard carrier speed, `1` = Express expedited transit. |
+| **9** | `rainy_days_in_transit` | Open-Meteo API | Adverse/rainy weather days in the 5-day shipment transit window starting from `order_date`. |
+| **10**| `supplier_lead_time` | Warehouse / Supplier Rule | **4.0 days** if stock deficit exists (`current_stock < order_quantity`), **1.5 days** if in stock. |
+| **11**| `processing_time` | Warehouse Operations | Standard picking, packing, QC inspection, and invoice labeling: **1.0 day**. |
 
 ---
 
@@ -153,6 +155,7 @@ backend/
 │   │   ├── category_controller.py
 │   │   ├── customer_controller.py
 │   │   ├── order_controller.py
+│   │   ├── prediction_controller.py
 │   │   ├── product_controller.py
 │   │   ├── supplier_controller.py
 │   │   └── user_controller.py
@@ -166,9 +169,11 @@ backend/
 │   ├── ml/                          # Machine Learning Pipeline
 │   │   ├── data/                    # Historical training datasets
 │   │   ├── models/                  # Serialized XGBoost model artifacts
-│   │   ├── features.py              # 9-feature transformation logic
+│   │   ├── features.py              # 10-feature transformation logic
 │   │   ├── predict.py               # Model loading & inference engine
-│   │   └── train.py                 # Training script & model evaluation
+│   │   ├── synthetic_data.py        # Dataset generator with realistic logistics
+│   │   ├── train.py                 # Training script & model evaluation
+│   │   └── weather.py               # Open-Meteo 5-day transit window forecast
 │   │
 │   ├── models/                      # SQLAlchemy ORM database models
 │   │   ├── category.py

@@ -63,7 +63,7 @@ PostgreSQL Database                -> Relational storage with UUID primary keys 
 | **Category** | `categories` | `id`, `name`, `description`, `is_deleted`, `created_at` | Soft delete via `is_deleted = True`. 1-to-N with `products`. |
 | **Supplier** | `suppliers` | `id`, `name`, `contact_email`, `phone`, `address`, `is_deleted` | Soft delete via `is_deleted = True`. 1-to-N with `products`. |
 | **Product** | `products` | `id`, `name`, `sku`, `category_id`, `supplier_id`, `unit_price`, `quantity_in_stock`, `reorder_level`, `is_active` | FK to `categories` and `suppliers`. Unique SKU. Computed `stock_status`. |
-| **Customer** | `customers` | `id`, `name`, `email`, `phone`, `address`, `created_at`, `updated_at` | 1-to-N with `orders`. |
+| **Customer** | `customers` | `id`, `name`, `email`, `phone`, `residential_address`, `delivery_address`, `address`, `created_at`, `updated_at` | 1-to-N with `orders`. `delivery_address` is used by the ML pipeline to estimate road distance & 5-day transit weather. |
 | **Order** | `orders` | `id`, `customer_id`, `order_date`, `status`, `total_amount`, `predicted_delivery_date`, `actual_delivery_date` | FK to `customers`. Cascades to `order_items` and `order_tracking`. |
 | **OrderItem** | `order_items` | `id`, `order_id`, `product_id`, `quantity`, `unit_price`, `subtotal` | FK to `orders` and `products`. |
 | **OrderTracking**| `order_tracking` | `id`, `order_id`, `status`, `timestamp`, `notes` | Audit trail of order status transitions. |
@@ -703,8 +703,9 @@ Cookie: refresh_token=<refresh_token>
 {
   "name": "Sarah Connor",
   "email": "sarah.connor@example.com",
-  "phone": "+1-555-0199",
-  "address": "42 Cyberdyne Way, Los Angeles, CA"
+  "phone": "+91 98765 43210",
+  "residential_address": "Flat 12B, Palm Grove Residency, Noida Sector 62, UP 201301",
+  "delivery_address": "402 Business Tower, Bandra Kurla Complex, Mumbai, Maharashtra 400051"
 }
 ```
 - **Response (`201 Created`)**:
@@ -713,8 +714,10 @@ Cookie: refresh_token=<refresh_token>
   "id": "18c8e11a-0db5-48b2-8419-f521b44d2162",
   "name": "Sarah Connor",
   "email": "sarah.connor@example.com",
-  "phone": "+1-555-0199",
-  "address": "42 Cyberdyne Way, Los Angeles, CA",
+  "phone": "+91 98765 43210",
+  "residential_address": "Flat 12B, Palm Grove Residency, Noida Sector 62, UP 201301",
+  "delivery_address": "402 Business Tower, Bandra Kurla Complex, Mumbai, Maharashtra 400051",
+  "address": "402 Business Tower, Bandra Kurla Complex, Mumbai, Maharashtra 400051",
   "created_at": "2026-09-23T14:40:00Z",
   "updated_at": "2026-09-23T14:40:00Z"
 }
@@ -735,8 +738,10 @@ Cookie: refresh_token=<refresh_token>
       "id": "18c8e11a-0db5-48b2-8419-f521b44d2162",
       "name": "Sarah Connor",
       "email": "sarah.connor@example.com",
-      "phone": "+1-555-0199",
-      "address": "42 Cyberdyne Way, Los Angeles, CA",
+      "phone": "+91 98765 43210",
+      "residential_address": "Flat 12B, Palm Grove Residency, Noida Sector 62, UP 201301",
+      "delivery_address": "402 Business Tower, Bandra Kurla Complex, Mumbai, Maharashtra 400051",
+      "address": "402 Business Tower, Bandra Kurla Complex, Mumbai, Maharashtra 400051",
       "created_at": "2026-09-23T14:40:00Z",
       "updated_at": "2026-09-23T14:40:00Z"
     }
@@ -752,7 +757,7 @@ Cookie: refresh_token=<refresh_token>
 - **Method**: `GET`
 - **Path**: `/customers/{customer_id}`
 - **Auth Required**: Bearer Token (Any authenticated user)
-- **Response (`200 OK`)**: Single customer details.
+- **Response (`200 OK`)**: Single customer details with residential and delivery addresses.
 
 #### 6.4 Update Customer
 - **Method**: `PUT`
@@ -763,8 +768,8 @@ Cookie: refresh_token=<refresh_token>
 - **Request Body**:
 ```json
 {
-  "phone": "+1-555-9988",
-  "address": "742 Evergreen Terrace, Springfield"
+  "phone": "+91 98765 99999",
+  "delivery_address": "742 Commercial Road, Bengaluru, Karnataka 560001"
 }
 ```
 - **Response (`200 OK`)**: Updated customer object.
