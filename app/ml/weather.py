@@ -43,17 +43,12 @@ def get_transit_weather(
     order_date: datetime,
     destination_city: str | None = None
 ) -> Dict[str, Any]:
-    """
-    Fetches a 5-day shipment transit window forecast/history from Open-Meteo
-    using standard library urllib (Zero external dependencies and Zero API keys).
-    Evaluates rain, storm, and fog risks during the transit window.
-    """
     lat, lon = resolve_city_coordinates(destination_city)
     
     start_date = order_date.strftime("%Y-%m-%d")
     end_date = (order_date + timedelta(days=4)).strftime("%Y-%m-%d")
 
-    url = (
+    url = ( #create request url for open-meteo api
         f"https://archive-api.open-meteo.com/v1/archive"
         f"?latitude={lat}&longitude={lon}"
         f"&start_date={start_date}&end_date={end_date}"

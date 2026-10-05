@@ -66,8 +66,22 @@ app.include_router(
     prediction_router,
     prefix="/api/v1",
 )
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+# Mount ML Reports directory so graphs can be viewed directly in browser
+REPORTS_DIR = Path("app/ml/reports")
+REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/reports", StaticFiles(directory=str(REPORTS_DIR)), name="reports")
+
+
 @app.get("/")
 def root():
     return {
-        "message": "Inventory & Stock Management API is running"
+        "message": "Inventory & Stock Management API is running",
+        "ml_reports": {
+            "actual_vs_predicted": "/reports/actual_vs_predicted.png",
+            "feature_importance": "/reports/feature_importance.png",
+            "error_distribution": "/reports/error_distribution.png",
+        }
     }
