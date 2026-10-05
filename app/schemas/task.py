@@ -73,8 +73,9 @@ class TaskCreate(BaseModel):
         if v is not None:
             now = datetime.now(timezone.utc)
             v_utc = v if v.tzinfo else v.replace(tzinfo=timezone.utc)
-            if v_utc < now:
-                raise ValueError("Task due_date cannot be in the past")
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            if v_utc < today_start:
+                raise ValueError("Task due_date cannot be before today")
         return v
 
     @model_validator(mode="after")
@@ -115,8 +116,9 @@ class TaskUpdate(BaseModel):
         if v is not None:
             now = datetime.now(timezone.utc)
             v_utc = v if v.tzinfo else v.replace(tzinfo=timezone.utc)
-            if v_utc < now:
-                raise ValueError("Task due_date cannot be in the past")
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            if v_utc < today_start:
+                raise ValueError("Task due_date cannot be before today")
         return v
 
 

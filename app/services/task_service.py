@@ -288,8 +288,9 @@ def create_task(
     if data.due_date is not None:
         now = datetime.now(timezone.utc)
         due_utc = data.due_date if data.due_date.tzinfo else data.due_date.replace(tzinfo=timezone.utc)
-        if due_utc < now:
-            raise BadRequestException("Task due_date cannot be in the past")
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        if due_utc < today_start:
+            raise BadRequestException("Task due_date cannot be before today")
 
     assignee = _validate_assignee(
         db,
@@ -492,8 +493,9 @@ def update_task(
     if data.due_date is not None:
         now = datetime.now(timezone.utc)
         due_utc = data.due_date if data.due_date.tzinfo else data.due_date.replace(tzinfo=timezone.utc)
-        if due_utc < now:
-            raise BadRequestException("Task due_date cannot be in the past")
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        if due_utc < today_start:
+            raise BadRequestException("Task due_date cannot be before today")
 
     update_data = data.model_dump(
         exclude_unset=True
