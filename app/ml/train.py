@@ -88,9 +88,9 @@ def train_model():
     acc_1_day = (abs_errors <= 1.0).mean() * 100
     acc_2_days = (abs_errors <= 2.0).mean() * 100
 
-    print("\n" + "=" * 60)
+   
     print("MODEL EVALUATION RESULTS")
-    print("=" * 60)
+    
     print(f"Mean Absolute Error (MAE)  : {mae:.2f} days")
     print(f"Root Mean Squared Error    : {rmse:.2f} days")
     print(f"R^2 Score                  : {r2:.4f}")

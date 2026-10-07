@@ -9,9 +9,7 @@ def build_delivery_features(
     supplier_lead_time: float = 2.0,
     processing_time: float = 1.0,
 ) -> dict:
-    """
-    Constructs the exact 10-parameter feature dictionary for XGBoost inference.
-    """
+   
     shortage_quantity = max(order_quantity - current_stock, 0)
 
     return {

@@ -6,10 +6,7 @@ MODEL_PATH = Path("app/ml/models/delivery_model.pkl")
 
 
 def predict_delivery_days(features: dict) -> dict:
-    """
-    Runs XGBoost inference on the input feature dictionary.
-    Returns predicted turnaround days and model metadata.
-    """
+    
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
             "Delivery prediction model artifact not found. "
